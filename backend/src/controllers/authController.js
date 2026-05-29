@@ -89,7 +89,7 @@ async function studentLogin(req, res, next) {
     });
     res.json({
       token,
-      student: { id: student.id, name: student.name, studentCode: student.studentCode, class: student.class },
+      student: { id: student.id, name: student.name, studentCode: student.studentCode, classId: student.classId, class: student.class },
     });
   } catch (err) {
     next(err);

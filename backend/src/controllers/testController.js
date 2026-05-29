@@ -121,4 +121,17 @@ async function getResults(req, res, next) {
   }
 }
 
-module.exports = { createTest, startTest, finishTest, submitAnswers, getResults };
+async function getClassActiveTest(req, res, next) {
+  try {
+    const classId = req.user.classId;
+    if (!classId) return res.json(null);
+    const test = await prisma.test.findFirst({
+      where: { classId, status: { in: ['waiting', 'active'] } },
+      orderBy: { createdAt: 'desc' },
+      select: { id: true, roomCode: true, status: true },
+    });
+    res.json(test);
+  } catch (err) { next(err); }
+}
+
+module.exports = { createTest, startTest, finishTest, submitAnswers, getResults, getClassActiveTest };

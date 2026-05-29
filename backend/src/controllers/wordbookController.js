@@ -123,4 +123,53 @@ async function importCSV(req, res, next) {
   }
 }
 
-module.exports = { createWordBook, getWordBook, getWords, addWord, importCSV };
+async function bulkAddWords(req, res, next) {
+  try {
+    const words = req.body;
+    if (!Array.isArray(words) || words.length === 0) {
+      return res.status(400).json({ error: '단어 목록이 비어있습니다.' });
+    }
+
+    const wb = await prisma.wordBook.findUnique({ where: { id: req.params.id } });
+    if (!wb) return res.status(404).json({ error: '단어장을 찾을 수 없습니다.' });
+
+    const maxOrder = await prisma.word.aggregate({
+      where: { wordBookId: req.params.id },
+      _max: { order: true },
+    });
+    let order = (maxOrder._max.order ?? -1) + 1;
+
+    const toCreate = words
+      .filter(w => w.english?.trim() && w.korean?.trim())
+      .map(w => ({
+        english: w.english.trim(),
+        korean: w.korean.trim(),
+        example: w.example?.trim() || null,
+        wordBookId: req.params.id,
+        order: order++,
+      }));
+
+    await prisma.word.createMany({ data: toCreate });
+    res.status(201).json({ added: toCreate.length });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function deleteWord(req, res, next) {
+  try {
+    const word = await prisma.word.findFirst({
+      where: { id: req.params.wordId, wordBookId: req.params.id },
+    });
+    if (!word) return res.status(404).json({ error: '단어를 찾을 수 없습니다.' });
+
+    await prisma.studyRecord.deleteMany({ where: { wordId: word.id } });
+    await prisma.word.delete({ where: { id: word.id } });
+
+    res.json({ message: '단어가 삭제되었습니다.' });
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { createWordBook, getWordBook, getWords, addWord, bulkAddWords, importCSV, deleteWord };

@@ -101,4 +101,26 @@ async function bulkCreateStudents(req, res, next) {
   }
 }
 
-module.exports = { createClass, getClasses, getClass, bulkCreateStudents };
+async function deleteStudent(req, res, next) {
+  try {
+    const cls = await prisma.class.findFirst({
+      where: { id: req.params.id, teacherId: req.user.sub },
+    });
+    if (!cls) return res.status(404).json({ error: '학급을 찾을 수 없습니다.' });
+
+    const student = await prisma.student.findFirst({
+      where: { id: req.params.studentId, classId: cls.id },
+    });
+    if (!student) return res.status(404).json({ error: '학생을 찾을 수 없습니다.' });
+
+    await prisma.studyRecord.deleteMany({ where: { studentId: student.id } });
+    await prisma.testResult.deleteMany({ where: { studentId: student.id } });
+    await prisma.student.delete({ where: { id: student.id } });
+
+    res.json({ message: '학생이 삭제되었습니다.' });
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { createClass, getClasses, getClass, bulkCreateStudents, deleteStudent };

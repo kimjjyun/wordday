@@ -1,17 +1,23 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuthStore } from '../../store/authStore';
 import { getTodayWords, getStats } from '../../api/study';
 import Layout from '../../components/Layout';
-import Card from '../../components/Card';
-import Button from '../../components/Button';
+
+const DAYS_EN = ['SUNDAY','MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY','SATURDAY'];
+const MONTHS  = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+const PREVIEW = 5;
 
 export default function StudentHome() {
-  const { user } = useAuthStore();
-  const navigate = useNavigate();
-  const [words, setWords] = useState([]);
-  const [stats, setStats] = useState(null);
+  const navigate  = useNavigate();
+  const [words,   setWords]   = useState([]);
+  const [stats,   setStats]   = useState(null);
   const [loading, setLoading] = useState(true);
+  const [showAll, setShowAll] = useState(false);
+
+  const now     = new Date();
+  const dayEn   = DAYS_EN[now.getDay()];
+  const dateStr = `${now.getDate()} ${MONTHS[now.getMonth()]} ${now.getFullYear()}`;
 
   useEffect(() => {
     Promise.all([getTodayWords(), getStats()])
@@ -19,60 +25,151 @@ export default function StudentHome() {
       .finally(() => setLoading(false));
   }, []);
 
+  const remaining = Math.max(0, words.length - PREVIEW);
+
   return (
-    <Layout title="WordDay">
-      <div className="space-y-4">
-        <Card>
-          <p className="text-gray-500 text-sm">안녕하세요,</p>
-          <p className="text-xl font-bold">{user?.name} 님</p>
+    <Layout title="WORDDAY">
+      <div className="pb-8">
+
+        {/* 날짜 헤더 */}
+        <div className="pt-2 pb-5">
+          <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-gray-300 mb-1">{dateStr}</p>
+          <h1 className="text-5xl font-black tracking-tighter text-black leading-none">{dayEn}</h1>
           {stats && (
-            <div className="flex gap-4 mt-3 text-center">
-              <div className="flex-1 bg-indigo-50 rounded-xl py-2">
-                <p className="text-2xl font-bold text-indigo-600">{stats.due}</p>
-                <p className="text-xs text-gray-500">오늘 학습</p>
-              </div>
-              <div className="flex-1 bg-emerald-50 rounded-xl py-2">
-                <p className="text-2xl font-bold text-emerald-600">{stats.mastered}</p>
-                <p className="text-xs text-gray-500">완전 암기</p>
-              </div>
-              <div className="flex-1 bg-gray-50 rounded-xl py-2">
-                <p className="text-2xl font-bold text-gray-600">{stats.totalWords}</p>
-                <p className="text-xs text-gray-500">전체 단어</p>
-              </div>
+            <div className="flex items-center gap-1.5 mt-4">
+              {[...Array(8)].map((_, i) => {
+                const total  = Math.max(stats.totalWords, 1);
+                const filled = Math.round(((stats.totalWords - stats.due) / total) * 8);
+                return <div key={i} className={`w-1.5 h-1.5 rounded-full ${i < filled ? 'bg-black' : 'bg-gray-200'}`} />;
+              })}
+              <span className="text-[11px] text-gray-300 ml-1 font-medium">{stats.due}개 남음</span>
             </div>
           )}
-        </Card>
+        </div>
 
-        {loading ? (
-          <p className="text-center text-gray-400 py-8">불러오는 중...</p>
-        ) : words.length === 0 ? (
-          <Card><p className="text-center text-gray-400 py-4">오늘 학습할 단어가 없습니다.</p></Card>
-        ) : (
-          <Card>
-            <p className="font-semibold mb-1">오늘의 단어</p>
-            <p className="text-indigo-500 font-bold text-lg mb-3">{words.length}개</p>
-            <div className="max-h-40 overflow-y-auto space-y-1 mb-4">
-              {words.slice(0, 5).map(w => (
-                <div key={w.id} className="flex justify-between text-sm">
-                  <span className="font-medium">{w.english}</span>
-                  <span className="text-gray-400">{w.korean}</span>
+        {/* 통계 */}
+        {stats && (
+          <>
+            <div className="h-px bg-gray-100" />
+            <div className="flex py-4">
+              {[
+                { label: '오늘 학습', value: stats.due },
+                { label: '완전 암기', value: stats.mastered },
+                { label: '전체 단어', value: stats.totalWords },
+              ].map((s, i) => (
+                <div key={i} className={`flex-1 text-center ${i > 0 ? 'border-l border-gray-100' : ''}`}>
+                  <p className="text-2xl font-black text-black">{s.value}</p>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-gray-300 mt-0.5">{s.label}</p>
                 </div>
               ))}
-              {words.length > 5 && <p className="text-xs text-gray-400 text-center">+ {words.length - 5}개 더</p>}
             </div>
-            <div className="space-y-2">
-              <Button onClick={() => navigate('/student/flashcard')}>암기하기 (플래시카드)</Button>
-              <Button variant="outline" onClick={() => navigate('/student/quiz')}>퀴즈 풀기</Button>
-            </div>
-          </Card>
+            <div className="h-px bg-gray-100" />
+          </>
         )}
 
-        <Card>
-          <p className="font-semibold mb-2">조회 테스트 참여</p>
-          <Button variant="secondary" onClick={() => navigate('/student/test/wait')}>
-            방 코드 입력하기
-          </Button>
-        </Card>
+        {/* 오늘의 단어 */}
+        {!loading && (
+          <div className="pt-5">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-gray-300">Today's Words</p>
+              <span className="text-[11px] font-bold text-gray-300">{words.length}개</span>
+            </div>
+
+            {words.length === 0 ? (
+              <div className="py-10 text-center">
+                <p className="text-2xl font-black tracking-tighter mb-1">모두 완료!</p>
+                <p className="text-sm text-gray-300">오늘 학습할 단어가 없어요</p>
+              </div>
+            ) : (
+              <>
+                {/* 첫 5개 */}
+                {words.slice(0, PREVIEW).map((w, i) => (
+                  <div key={w.id}>
+                    <div className="flex items-baseline gap-3 py-3.5">
+                      <span className="text-[11px] font-bold text-gray-200 w-5 text-right shrink-0">{i + 1}</span>
+                      <span className="font-bold text-[15px] text-black tracking-tight flex-1">{w.english}</span>
+                      <span className="text-[13px] text-gray-400 font-medium shrink-0">{w.korean}</span>
+                    </div>
+                    <div className="h-px bg-gray-50 ml-8" />
+                  </div>
+                ))}
+
+                {/* 더보기/접기 — 항상 5번째 단어 바로 아래 고정 */}
+                {remaining > 0 && (
+                  <button
+                    onClick={() => setShowAll(v => !v)}
+                    className="w-full flex items-center justify-between border border-gray-100 rounded-full px-5 py-3 mt-2 mb-1 hover:border-gray-300 transition"
+                  >
+                    <span className="text-[13px] font-medium text-gray-400">
+                      {showAll ? '접기' : `+${remaining}개 더 보기`}
+                    </span>
+                    <div className="w-6 h-6 rounded-full border border-gray-200 flex items-center justify-center text-gray-400 text-sm">
+                      {showAll ? '−' : '+'}
+                    </div>
+                  </button>
+                )}
+
+                {/* 나머지 단어 — 버튼 아래 펼쳐짐 */}
+                {showAll && remaining > 0 && (
+                  <div className="slide-down">
+                    {words.slice(PREVIEW).map((w, i) => (
+                      <div key={w.id}>
+                        <div className="flex items-baseline gap-3 py-3.5">
+                          <span className="text-[11px] font-bold text-gray-200 w-5 text-right shrink-0">{PREVIEW + i + 1}</span>
+                          <span className="font-bold text-[15px] text-black tracking-tight flex-1">{w.english}</span>
+                          <span className="text-[13px] text-gray-400 font-medium shrink-0">{w.korean}</span>
+                        </div>
+                        <div className="h-px bg-gray-50 ml-8" />
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* 액션 버튼 */}
+                <div className="space-y-2.5 mt-5">
+                  <button
+                    onClick={() => navigate('/student/flashcard')}
+                    className="w-full bg-black text-white font-bold py-4 rounded-full text-[15px] tracking-tight active:scale-[0.97] transition"
+                  >암기하기</button>
+                  <button
+                    onClick={() => navigate('/student/quiz')}
+                    className="w-full bg-white text-black border-2 border-black font-bold py-4 rounded-full text-[15px] tracking-tight active:scale-[0.97] transition"
+                  >퀴즈 풀기</button>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
+        {loading && (
+          <div className="pt-10 space-y-0">
+            {[...Array(5)].map((_, i) => (
+              <div key={i}>
+                <div className="flex items-baseline gap-3 py-3.5">
+                  <div className="w-5 h-3 bg-gray-100 rounded-full animate-pulse shrink-0" />
+                  <div className="h-4 bg-gray-100 rounded-full animate-pulse flex-1" />
+                  <div className="h-3 bg-gray-100 rounded-full animate-pulse w-16 shrink-0" />
+                </div>
+                <div className="h-px bg-gray-50" />
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* 함께하기 */}
+        {!loading && (
+          <div className="pt-8">
+            <div className="h-px bg-gray-100 mb-5" />
+            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-gray-300 mb-3">Together</p>
+            <button
+              onClick={() => navigate('/student/test/wait')}
+              className="w-full border border-gray-200 text-black font-bold py-4 rounded-full text-[15px] tracking-tight active:scale-[0.97] transition hover:border-gray-400"
+            >
+              함께하기
+            </button>
+          </div>
+        )}
+
       </div>
     </Layout>
   );

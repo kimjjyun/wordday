@@ -5,6 +5,7 @@ const {
   getClasses,
   getClass,
   bulkCreateStudents,
+  deleteStudent,
 } = require('../controllers/classController');
 
 router.use(requireTeacher);
@@ -13,5 +14,6 @@ router.post('/', createClass);
 router.get('/', getClasses);
 router.get('/:id', getClass);
 router.post('/:id/students/bulk', bulkCreateStudents);
+router.delete('/:id/students/:studentId', deleteStudent);
 
 module.exports = router;

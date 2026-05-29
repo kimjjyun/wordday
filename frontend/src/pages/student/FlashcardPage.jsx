@@ -1,109 +1,213 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getTodayWords, submitReview } from '../../api/study';
-import Layout from '../../components/Layout';
-import Button from '../../components/Button';
 
 export default function FlashcardPage() {
   const navigate = useNavigate();
-  const [words, setWords] = useState([]);
-  const [index, setIndex] = useState(0);
+  const [words,   setWords]   = useState([]);
+  const [index,   setIndex]   = useState(0);
   const [flipped, setFlipped] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [done, setDone] = useState(false);
+  const [done,    setDone]    = useState(false);
   const [wrongWords, setWrongWords] = useState([]);
+  const [rated,   setRated]   = useState(null);
 
   useEffect(() => {
-    getTodayWords()
-      .then(r => setWords(r.data))
-      .finally(() => setLoading(false));
+    getTodayWords().then(r => setWords(r.data)).finally(() => setLoading(false));
   }, []);
 
-  const current = words[index];
+  const current  = words[index];
+  const progress = words.length > 0 ? (index / words.length) * 100 : 0;
 
-  const handleRate = async (rating) => {
-    if (rating === 1) setWrongWords(w => [...w, current]);
-    await submitReview({ wordId: current.id, rating });
-    if (index + 1 >= words.length) {
-      setDone(true);
-    } else {
-      setIndex(i => i + 1);
-      setFlipped(false);
-    }
+  const handleRate = async (r) => {
+    if (rated) return;
+    setRated(r);
+    if (r === 1) setWrongWords(w => [...w, current]);
+    await submitReview({ wordId: current.id, rating: r });
+    setTimeout(() => {
+      if (index + 1 >= words.length) { setDone(true); }
+      else { setIndex(i => i + 1); setFlipped(false); setRated(null); }
+    }, 280);
   };
 
-  if (loading) return <Layout title="플래시카드" back><p className="text-center py-20 text-gray-400">불러오는 중...</p></Layout>;
-
-  if (words.length === 0) return (
-    <Layout title="플래시카드" back>
-      <div className="text-center py-20">
-        <p className="text-gray-400 mb-4">오늘 학습할 단어가 없습니다.</p>
-        <Button onClick={() => navigate('/student')}>홈으로</Button>
+  // ── 로딩 ─────────────────────────────────────────
+  if (loading) return (
+    <div className="min-h-screen flex items-center justify-center bg-white max-w-lg mx-auto">
+      <div className="text-center">
+        <div className="flex gap-1.5 justify-center mb-3">
+          {[...Array(5)].map((_, i) => (
+            <div key={i} className="w-1.5 h-1.5 rounded-full bg-gray-200 animate-pulse" style={{ animationDelay: `${i * 0.15}s` }} />
+          ))}
+        </div>
+        <p className="text-[11px] font-bold uppercase tracking-widest text-gray-300">Loading</p>
       </div>
-    </Layout>
+    </div>
   );
 
+  // ── 단어 없음 ──────────────────────────────────────
+  if (words.length === 0) return (
+    <div className="min-h-screen flex flex-col items-center justify-center bg-white max-w-lg mx-auto px-6 text-center">
+      <p className="text-[11px] font-bold uppercase tracking-widest text-gray-300 mb-6">Done</p>
+      <p className="text-4xl font-black tracking-tighter mb-2">학습 완료</p>
+      <p className="text-sm text-gray-400 mb-10">오늘 학습할 단어가 없어요</p>
+      <button onClick={() => navigate('/student')} className="bg-black text-white font-bold py-4 px-10 rounded-full text-[15px] tracking-tight">
+        홈으로
+      </button>
+    </div>
+  );
+
+  // ── 완료 화면 ──────────────────────────────────────
   if (done) return (
-    <Layout title="학습 완료!" back>
-      <div className="text-center py-12 space-y-4">
-        <p className="text-5xl">🎉</p>
-        <p className="text-xl font-bold">오늘 학습 완료!</p>
-        <p className="text-gray-500">{words.length}개 중 <span className="text-red-500 font-semibold">{wrongWords.length}개</span> 틀렸어요</p>
+    <div className="min-h-screen flex flex-col bg-white max-w-lg mx-auto px-6">
+      <div className="flex-1 flex flex-col justify-center pt-16">
+        <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-gray-300 mb-6">Complete</p>
+        <h1 className="text-5xl font-black tracking-tighter leading-none mb-3">
+          {wrongWords.length === 0 ? '완벽해요.' : '학습 완료.'}
+        </h1>
+        <p className="text-sm text-gray-400 font-medium">
+          {words.length}개 중 <span className="text-black font-bold">{words.length - wrongWords.length}개</span> 맞았어요
+        </p>
+
         {wrongWords.length > 0 && (
-          <div className="bg-red-50 rounded-xl p-4 text-left space-y-2">
-            <p className="font-semibold text-red-600 text-sm">틀린 단어</p>
-            {wrongWords.map(w => (
-              <div key={w.id} className="flex justify-between text-sm">
-                <span>{w.english}</span><span className="text-gray-500">{w.korean}</span>
-              </div>
-            ))}
+          <div className="mt-8">
+            <div className="h-px bg-gray-100 mb-4" />
+            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-gray-300 mb-3">다시 볼 단어</p>
+            <div className="space-y-0">
+              {wrongWords.map((w, i) => (
+                <div key={w.id}>
+                  <div className="flex justify-between items-baseline py-3">
+                    <span className="font-bold text-[15px] text-black">{w.english}</span>
+                    <span className="text-[13px] text-gray-400">{w.korean}</span>
+                  </div>
+                  {i < wrongWords.length - 1 && <div className="h-px bg-gray-50" />}
+                </div>
+              ))}
+            </div>
           </div>
         )}
-        <Button onClick={() => navigate('/student')}>홈으로</Button>
       </div>
-    </Layout>
+
+      <div className="pb-10">
+        <button onClick={() => navigate('/student')} className="w-full bg-black text-white font-bold py-4 rounded-full text-[15px] tracking-tight active:scale-[0.97] transition">
+          홈으로
+        </button>
+      </div>
+    </div>
   );
 
+  // ── 메인 플래시카드 ───────────────────────────────
   return (
-    <Layout title="플래시카드" back>
-      {/* 진행률 */}
-      <div className="mb-4">
-        <div className="flex justify-between text-sm text-gray-500 mb-1">
-          <span>{index + 1} / {words.length}</span>
-          <span>{Math.round(((index) / words.length) * 100)}%</span>
+    <div className="min-h-screen flex flex-col bg-white max-w-lg mx-auto">
+
+      {/* 상단 헤더 */}
+      <div className="px-5 pt-4 pb-3 flex items-center gap-4">
+        <button
+          onClick={() => navigate('/student')}
+          className="text-black font-bold text-xl w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition"
+        >←</button>
+        <div className="flex-1">
+          <div className="w-full bg-gray-100 rounded-full h-1 overflow-hidden">
+            <div
+              className="bg-black h-1 rounded-full transition-all duration-500"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
         </div>
-        <div className="w-full bg-gray-200 rounded-full h-2">
-          <div
-            className="bg-indigo-500 h-2 rounded-full transition-all"
-            style={{ width: `${(index / words.length) * 100}%` }}
-          />
-        </div>
+        <span className="text-[11px] font-bold text-gray-300 tracking-wider min-w-[40px] text-right">
+          {index + 1}/{words.length}
+        </span>
       </div>
 
-      {/* 카드 */}
-      <div
-        className="bg-white rounded-3xl shadow-md border border-gray-100 min-h-56 flex flex-col items-center justify-center p-8 cursor-pointer active:scale-95 transition mb-6"
-        onClick={() => setFlipped(f => !f)}
-      >
-        {!flipped ? (
-          <>
-            <p className="text-3xl font-bold text-gray-800 mb-2">{current.english}</p>
-            <p className="text-gray-400 text-sm">탭하여 뜻 확인</p>
-          </>
-        ) : (
-          <>
-            <p className="text-2xl font-bold text-indigo-600 mb-2">{current.korean}</p>
-            {current.example && <p className="text-gray-500 text-sm text-center mt-2 italic">"{current.example}"</p>}
-          </>
-        )}
-      </div>
+      {/* 카드 영역 */}
+      <div className="flex-1 flex flex-col justify-between px-5 pb-8 pt-4">
 
-      {flipped && (
-        <div className="grid grid-cols-2 gap-3">
-          <Button variant="danger" onClick={() => handleRate(1)}>몰랐어 😅</Button>
-          <Button variant="success" onClick={() => handleRate(3)}>알았어 😊</Button>
+        {/* 플립 카드 */}
+        <div className="flex-1 flex items-center">
+          <div className="flip-scene w-full" onClick={() => !rated && setFlipped(f => !f)}>
+            <div
+              style={{
+                transformStyle: 'preserve-3d',
+                transition: 'transform 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
+                transform: flipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
+                position: 'relative',
+                height: '340px',
+                cursor: 'pointer',
+              }}
+            >
+              {/* 앞면 — 영단어 */}
+              <div
+                style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', position: 'absolute', inset: 0 }}
+                className="border border-gray-100 rounded-[28px] flex flex-col items-center justify-center p-8 text-center bg-white"
+              >
+                <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-gray-200 mb-8">
+                  {current.state === 'new' ? 'New Word' : 'Review'}
+                </p>
+                <p className="text-5xl font-black tracking-tighter text-black leading-tight">
+                  {current.english}
+                </p>
+                <p className="text-[12px] font-medium text-gray-200 mt-8">
+                  tap to flip
+                </p>
+              </div>
+
+              {/* 뒷면 — 한국어 */}
+              <div
+                style={{
+                  backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden',
+                  transform: 'rotateY(180deg)',
+                  position: 'absolute', inset: 0,
+                }}
+                className="bg-black rounded-[28px] flex flex-col items-center justify-center p-8 text-center"
+              >
+                <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-white/30 mb-8">
+                  {current.english}
+                </p>
+                <p className="text-5xl font-black tracking-tighter text-white leading-tight">
+                  {current.korean}
+                </p>
+                {current.example && (
+                  <p className="text-[12px] text-white/40 mt-8 leading-relaxed font-medium max-w-[240px]">
+                    "{current.example}"
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
-      )}
-    </Layout>
+
+        {/* 평가 버튼 */}
+        <div className="mt-6 space-y-2.5">
+          {!flipped ? (
+            <button
+              onClick={() => setFlipped(true)}
+              className="w-full bg-black text-white font-bold py-4 rounded-full text-[15px] tracking-tight active:scale-[0.97] transition"
+            >
+              뜻 확인하기
+            </button>
+          ) : (
+            <div className="grid grid-cols-2 gap-2.5">
+              <button
+                onClick={() => handleRate(1)}
+                disabled={!!rated}
+                className={`py-4 rounded-full font-bold text-[15px] tracking-tight transition active:scale-[0.97] disabled:opacity-50 ${
+                  rated === 1 ? 'bg-black text-white' : 'bg-white text-black border-2 border-black'
+                }`}
+              >
+                몰랐어
+              </button>
+              <button
+                onClick={() => handleRate(3)}
+                disabled={!!rated}
+                className={`py-4 rounded-full font-bold text-[15px] tracking-tight transition active:scale-[0.97] disabled:opacity-50 ${
+                  rated === 3 ? 'bg-black text-white' : 'bg-white text-black border-2 border-black'
+                }`}
+              >
+                알았어
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }

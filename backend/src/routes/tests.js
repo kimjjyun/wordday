@@ -6,8 +6,10 @@ const {
   finishTest,
   submitAnswers,
   getResults,
+  getClassActiveTest,
 } = require('../controllers/testController');
 
+router.get('/class/active', authenticate, getClassActiveTest);
 router.post('/', requireTeacher, createTest);
 router.patch('/:id/start', requireTeacher, startTest);
 router.patch('/:id/finish', requireTeacher, finishTest);

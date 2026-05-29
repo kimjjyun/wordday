@@ -9,3 +9,5 @@ export const importCSV      = (id, file)    => {
   form.append('file', file);
   return client.post(`/wordbooks/${id}/import`, form);
 };
+export const bulkAddWords   = (id, words)    => client.post(`/wordbooks/${id}/words/bulk`, words);
+export const deleteWord     = (wbId, wordId) => client.delete(`/wordbooks/${wbId}/words/${wordId}`);
