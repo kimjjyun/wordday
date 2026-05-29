@@ -1,0 +1,119 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ─── 교사 ───────────────────────────────────────────────
+model Teacher {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String
+  classes   Class[]
+  createdAt DateTime @default(now())
+}
+
+// ─── 학급 ───────────────────────────────────────────────
+model Class {
+  id        String     @id @default(cuid())
+  name      String
+  code      String     @unique
+  teacher   Teacher    @relation(fields: [teacherId], references: [id])
+  teacherId String
+  students  Student[]
+  wordBooks WordBook[]
+  tests     Test[]
+  createdAt DateTime   @default(now())
+}
+
+// ─── 학생 ───────────────────────────────────────────────
+model Student {
+  id           String        @id @default(cuid())
+  name         String
+  studentCode  String
+  password     String
+  class        Class         @relation(fields: [classId], references: [id])
+  classId      String
+  studyRecords StudyRecord[]
+  testResults  TestResult[]
+  createdAt    DateTime      @default(now())
+
+  @@unique([studentCode, classId])
+}
+
+// ─── 단어장 ─────────────────────────────────────────────
+model WordBook {
+  id        String   @id @default(cuid())
+  title     String
+  week      Int
+  class     Class    @relation(fields: [classId], references: [id])
+  classId   String
+  words     Word[]
+  tests     Test[]
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+// ─── 단어 ───────────────────────────────────────────────
+model Word {
+  id           String        @id @default(cuid())
+  english      String
+  korean       String
+  example      String?
+  wordBook     WordBook      @relation(fields: [wordBookId], references: [id], onDelete: Cascade)
+  wordBookId   String
+  order        Int
+  studyRecords StudyRecord[]
+}
+
+// ─── 학습 기록 (SRS 핵심) ───────────────────────────────
+model StudyRecord {
+  id          String   @id @default(cuid())
+  student     Student  @relation(fields: [studentId], references: [id])
+  studentId   String
+  word        Word     @relation(fields: [wordId], references: [id], onDelete: Cascade)
+  wordId      String
+  // FSRS 알고리즘 필드
+  stability   Float    @default(1.0)
+  difficulty  Float    @default(5.0)
+  nextReview  DateTime @default(now())
+  lastReview  DateTime?
+  reps        Int      @default(0)
+  lapses      Int      @default(0)
+  state       String   @default("new")  // new | learning | review | relearning
+
+  @@unique([studentId, wordId])
+}
+
+// ─── 테스트 (조회 테스트 세션) ──────────────────────────
+model Test {
+  id         String       @id @default(cuid())
+  class      Class        @relation(fields: [classId], references: [id])
+  classId    String
+  wordBook   WordBook     @relation(fields: [wordBookId], references: [id])
+  wordBookId String
+  status     String       @default("waiting")  // waiting | active | finished
+  roomCode   String       @unique
+  results    TestResult[]
+  createdAt  DateTime     @default(now())
+  finishedAt DateTime?
+}
+
+// ─── 테스트 결과 ─────────────────────────────────────────
+model TestResult {
+  id          String   @id @default(cuid())
+  test        Test     @relation(fields: [testId], references: [id])
+  testId      String
+  student     Student  @relation(fields: [studentId], references: [id])
+  studentId   String
+  answers     String  // JSON 직렬화 문자열 (SQLite Json 미지원)
+  score       Int
+  total       Int
+  submittedAt DateTime @default(now())
+
+  @@unique([testId, studentId])
+}

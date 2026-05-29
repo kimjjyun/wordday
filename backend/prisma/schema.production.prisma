@@ -1,0 +1,110 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Teacher {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String
+  classes   Class[]
+  createdAt DateTime @default(now())
+}
+
+model Class {
+  id        String     @id @default(cuid())
+  name      String
+  code      String     @unique
+  teacher   Teacher    @relation(fields: [teacherId], references: [id])
+  teacherId String
+  students  Student[]
+  wordBooks WordBook[]
+  tests     Test[]
+  createdAt DateTime   @default(now())
+}
+
+model Student {
+  id           String        @id @default(cuid())
+  name         String
+  studentCode  String
+  password     String
+  class        Class         @relation(fields: [classId], references: [id])
+  classId      String
+  studyRecords StudyRecord[]
+  testResults  TestResult[]
+  createdAt    DateTime      @default(now())
+
+  @@unique([studentCode, classId])
+}
+
+model WordBook {
+  id        String   @id @default(cuid())
+  title     String
+  week      Int
+  class     Class    @relation(fields: [classId], references: [id])
+  classId   String
+  words     Word[]
+  tests     Test[]
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+model Word {
+  id           String        @id @default(cuid())
+  english      String
+  korean       String
+  example      String?
+  wordBook     WordBook      @relation(fields: [wordBookId], references: [id], onDelete: Cascade)
+  wordBookId   String
+  order        Int
+  studyRecords StudyRecord[]
+}
+
+model StudyRecord {
+  id          String    @id @default(cuid())
+  student     Student   @relation(fields: [studentId], references: [id])
+  studentId   String
+  word        Word      @relation(fields: [wordId], references: [id], onDelete: Cascade)
+  wordId      String
+  stability   Float     @default(1.0)
+  difficulty  Float     @default(5.0)
+  nextReview  DateTime  @default(now())
+  lastReview  DateTime?
+  reps        Int       @default(0)
+  lapses      Int       @default(0)
+  state       String    @default("new")
+
+  @@unique([studentId, wordId])
+}
+
+model Test {
+  id         String       @id @default(cuid())
+  class      Class        @relation(fields: [classId], references: [id])
+  classId    String
+  wordBook   WordBook     @relation(fields: [wordBookId], references: [id])
+  wordBookId String
+  status     String       @default("waiting")
+  roomCode   String       @unique
+  results    TestResult[]
+  createdAt  DateTime     @default(now())
+  finishedAt DateTime?
+}
+
+model TestResult {
+  id          String   @id @default(cuid())
+  test        Test     @relation(fields: [testId], references: [id])
+  testId      String
+  student     Student  @relation(fields: [studentId], references: [id])
+  studentId   String
+  answers     Json
+  score       Int
+  total       Int
+  submittedAt DateTime @default(now())
+
+  @@unique([testId, studentId])
+}
