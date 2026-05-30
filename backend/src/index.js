@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const http = require('http');
+const path = require('path');
 const { Server } = require('socket.io');
 const cors = require('cors');
 
@@ -40,6 +41,15 @@ app.use('/api/study', studyRoutes);
 app.use('/api/tests', testRoutes);
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
+
+// 프로덕션: 프론트엔드 정적 파일 서빙
+if (process.env.NODE_ENV === 'production') {
+  const clientDist = path.join(__dirname, '../../frontend/dist');
+  app.use(express.static(clientDist));
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(clientDist, 'index.html'));
+  });
+}
 
 app.use(errorHandler);
 

@@ -1,5 +1,10 @@
 {
-  "dependencies": {
+  "scripts": {
+    "build": "cd frontend && npm install && npm run build",
+    "start": "cd backend && node src/index.js",
+    "deploy:setup": "cd backend && npx prisma generate --schema=prisma/schema.production.prisma && npx prisma db push --schema=prisma/schema.production.prisma"
+  },
+  "devDependencies": {
     "playwright": "^1.60.0"
   }
 }
