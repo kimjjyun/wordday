@@ -87,10 +87,15 @@ export default function FlashcardPage() {
         )}
       </div>
 
-      <div className="pb-10">
-        <button onClick={() => navigate('/student')} className="w-full bg-black text-white font-bold py-4 rounded-full text-[15px] tracking-tight active:scale-[0.97] transition">
-          홈으로
-        </button>
+      <div className="pb-10 space-y-2.5">
+        <button
+          onClick={() => { setIndex(0); setFlipped(false); setRated(null); setDone(false); setWrongWords([]); }}
+          className="w-full bg-black text-white font-bold py-4 rounded-full text-[15px] tracking-tight active:scale-[0.97] transition"
+        >다시 하기</button>
+        <button
+          onClick={() => navigate('/student')}
+          className="w-full bg-white text-black border-2 border-black font-bold py-4 rounded-full text-[15px] tracking-tight active:scale-[0.97] transition"
+        >홈으로</button>
       </div>
     </div>
   );
@@ -144,9 +149,6 @@ export default function FlashcardPage() {
                 </p>
                 <p className="text-5xl font-black tracking-tighter text-black leading-tight">
                   {current.english}
-                </p>
-                <p className="text-[12px] font-medium text-gray-200 mt-8">
-                  tap to flip
                 </p>
               </div>
 

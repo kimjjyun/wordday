@@ -49,7 +49,8 @@ export default function TestWaitingPage() {
       {!joined ? (
         <div className="pt-12 pb-8">
           <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-gray-300 mb-3">Together</p>
-          <h1 className="text-4xl font-black tracking-tighter mb-8">방 코드 입력</h1>
+          <h1 className="text-4xl font-black tracking-tighter mb-2">방 코드 입력</h1>
+          <p className="text-[13px] text-gray-300 font-medium mb-8">선생님이 테스트를 시작하면 화면에 코드가 표시돼요</p>
 
           <input
             className="w-full border border-gray-200 rounded-2xl px-5 py-4 text-center text-3xl font-black tracking-[0.3em] uppercase outline-none focus:border-black transition mb-3"

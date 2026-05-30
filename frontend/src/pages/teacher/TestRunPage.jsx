@@ -5,6 +5,26 @@ import { startTest, finishTest } from '../../api/tests';
 import Layout from '../../components/Layout';
 import Button from '../../components/Button';
 
+function CopyableCode({ code }) {
+  const [copied, setCopied] = useState(false);
+  const handleCopy = () => {
+    navigator.clipboard.writeText(code);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
+  return (
+    <div className="flex flex-col items-center gap-2">
+      <p
+        onClick={handleCopy}
+        className="text-6xl font-black text-black tracking-widest cursor-pointer select-all"
+      >{code}</p>
+      <span className="text-[11px] font-bold text-gray-300 tracking-wider">
+        {copied ? '복사됨' : '탭하면 복사'}
+      </span>
+    </div>
+  );
+}
+
 export default function TestRunPage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -55,10 +75,11 @@ export default function TestRunPage() {
       <div className="space-y-6">
         {status === 'waiting' && (
           <>
-            <div className="bg-indigo-50 rounded-2xl p-6 text-center">
-              <p className="text-sm text-gray-500 mb-2">학생들에게 이 코드를 알려주세요</p>
-              <p className="text-6xl font-extrabold text-indigo-600 tracking-widest">{roomCode || '...'}</p>
-              <p className="text-gray-400 mt-2 text-sm">입장 학생: <span className="font-bold text-gray-700">{studentCount}명</span></p>
+            <div className="border border-gray-100 rounded-2xl p-6 text-center">
+              <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-gray-300 mb-4">Room Code</p>
+              {roomCode ? <CopyableCode code={roomCode} /> : <p className="text-6xl font-black text-gray-200 tracking-widest">...</p>}
+              <div className="h-px bg-gray-100 my-4" />
+              <p className="text-[13px] font-medium text-gray-400">입장 학생 <span className="font-black text-black">{studentCount}명</span></p>
             </div>
             <Button onClick={handleStart} disabled={!roomCode}>테스트 시작</Button>
           </>
@@ -66,19 +87,19 @@ export default function TestRunPage() {
 
         {status === 'active' && (
           <>
-            <div className="bg-gray-900 rounded-3xl p-8 text-center text-white min-h-48 flex flex-col justify-center">
-              <p className="text-sm text-gray-400 mb-2">{wordIndex + 1} / {totalWords}</p>
-              <p className="text-5xl font-extrabold">{currentWord ?? '준비 중...'}</p>
+            <div className="bg-black rounded-[28px] p-8 text-center text-white min-h-48 flex flex-col justify-center">
+              <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-white/30 mb-4">{wordIndex + 1} / {totalWords}</p>
+              <p className="text-5xl font-black tracking-tighter">{currentWord ?? '준비 중...'}</p>
             </div>
 
             <div className="flex gap-4 text-center">
               <div className="flex-1 bg-gray-50 rounded-xl py-3">
-                <p className="text-2xl font-bold">{studentCount}</p>
-                <p className="text-xs text-gray-500">참여 학생</p>
+                <p className="text-2xl font-black text-black">{studentCount}</p>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-gray-300 mt-0.5">참여 학생</p>
               </div>
-              <div className="flex-1 bg-emerald-50 rounded-xl py-3">
-                <p className="text-2xl font-bold text-emerald-600">{submittedCount}</p>
-                <p className="text-xs text-gray-500">제출 완료</p>
+              <div className="flex-1 bg-gray-50 rounded-xl py-3">
+                <p className="text-2xl font-black text-black">{submittedCount}</p>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-gray-300 mt-0.5">제출 완료</p>
               </div>
             </div>
 

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { teacherLogin, teacherRegister, studentLogin } from '../api/auth';
+import { useGuestStore } from '../store/guestStore';
 
 const TABS = [
   { key: 'student',  label: '학생' },
@@ -15,6 +16,7 @@ export default function LoginPage() {
   const [error,   setError]   = useState('');
   const [loading, setLoading] = useState(false);
   const { login } = useAuthStore();
+  const { enter }  = useGuestStore();
   const navigate  = useNavigate();
   const set = k => e => setForm(f => ({ ...f, [k]: e.target.value }));
 
@@ -102,7 +104,20 @@ export default function LoginPage() {
         </div>
       </form>
 
-      <p className="text-center text-[11px] text-gray-200 pb-10 pt-6">WordDay © 2026</p>
+      <div className="pb-10 pt-6 text-center space-y-3">
+        <div className="flex items-center gap-3">
+          <div className="flex-1 h-px bg-gray-100" />
+          <span className="text-[11px] font-bold text-gray-200 uppercase tracking-widest">또는</span>
+          <div className="flex-1 h-px bg-gray-100" />
+        </div>
+        <button
+          onClick={() => { enter(null); navigate('/solo'); }}
+          className="w-full border border-gray-200 text-gray-400 font-bold py-3.5 rounded-full text-[14px] tracking-tight hover:border-gray-400 hover:text-black transition"
+        >
+          로그인 없이 혼자 공부하기
+        </button>
+        <p className="text-[11px] text-gray-200">WordDay © 2026</p>
+      </div>
     </div>
   );
 }

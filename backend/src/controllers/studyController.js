@@ -84,12 +84,23 @@ async function submitReview(req, res, next) {
 async function getStats(req, res, next) {
   try {
     const studentId = req.user.sub;
-    const records = await prisma.studyRecord.findMany({ where: { studentId } });
+    const classId = req.user.classId;
 
-    const totalWords = records.length;
+    const wordBooks = await prisma.wordBook.findMany({
+      where: { classId, isActive: true },
+      include: { words: { select: { id: true } } },
+    });
+    const allWordIds = wordBooks.flatMap(wb => wb.words.map(w => w.id));
+    const totalWords = allWordIds.length;
+
+    const records = await prisma.studyRecord.findMany({ where: { studentId } });
+    const recordMap = new Map(records.map(r => [r.wordId, r]));
+
     const mastered = records.filter(r => r.state === 'review' && r.stability >= 10).length;
     const now = new Date();
-    const due = records.filter(r => new Date(r.nextReview) <= now).length;
+    const newCount = allWordIds.filter(id => !recordMap.has(id)).length;
+    const reviewDue = records.filter(r => new Date(r.nextReview) <= now).length;
+    const due = newCount + reviewDue;
 
     res.json({ totalWords, mastered, due });
   } catch (err) {

@@ -1,42 +1,44 @@
 import { useNavigate } from 'react-router-dom';
-import Layout from '../../components/Layout';
-import Button from '../../components/Button';
-import Card from '../../components/Card';
 
 export default function TestResultPage() {
   const navigate = useNavigate();
-  const myScore = JSON.parse(sessionStorage.getItem('my_score') || '{}');
+  const myScore    = JSON.parse(sessionStorage.getItem('my_score')    || '{}');
   const classResult = JSON.parse(sessionStorage.getItem('test_result') || '{}');
-
   const pct = myScore.total ? Math.round((myScore.score / myScore.total) * 100) : 0;
 
   return (
-    <Layout title="테스트 결과">
-      <div className="space-y-4 mt-4">
-        <Card className="text-center">
-          <p className="text-5xl mb-2">{pct >= 90 ? '🏆' : pct >= 70 ? '👍' : '📚'}</p>
-          <p className="text-3xl font-extrabold text-indigo-600">{myScore.score ?? '-'} / {myScore.total ?? '-'}</p>
-          <p className="text-gray-500 mt-1">{pct}점</p>
-        </Card>
+    <div className="min-h-screen flex flex-col bg-white max-w-lg mx-auto px-5">
+      <div className="flex-1 pt-16 pb-8">
+        <p className="text-[11px] font-bold uppercase tracking-[0.25em] text-gray-300 mb-4">Result</p>
+        <h1 className="text-6xl font-black tracking-tighter leading-none mb-1">
+          {myScore.score ?? '-'}<span className="text-gray-200">/{myScore.total ?? '-'}</span>
+        </h1>
+        <p className="text-[13px] font-bold text-gray-300 mt-2">{pct}점</p>
 
         {classResult.avg !== undefined && (
-          <Card>
-            <p className="font-semibold mb-3">반 전체 결과</p>
-            <div className="flex gap-4 text-center">
-              <div className="flex-1 bg-gray-50 rounded-xl py-3">
-                <p className="text-2xl font-bold">{classResult.avg}</p>
-                <p className="text-xs text-gray-500">반 평균</p>
+          <div className="mt-10">
+            <div className="h-px bg-gray-100 mb-5" />
+            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-gray-300 mb-4">반 전체</p>
+            <div className="flex gap-4">
+              <div className="flex-1 text-center border border-gray-100 rounded-2xl py-4">
+                <p className="text-2xl font-black text-black">{classResult.avg}</p>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-gray-300 mt-0.5">반 평균</p>
               </div>
-              <div className="flex-1 bg-yellow-50 rounded-xl py-3">
-                <p className="text-2xl font-bold text-yellow-600">{classResult.topScore}</p>
-                <p className="text-xs text-gray-500">최고점</p>
+              <div className="flex-1 text-center border border-gray-100 rounded-2xl py-4">
+                <p className="text-2xl font-black text-black">{classResult.topScore}</p>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-gray-300 mt-0.5">최고점</p>
               </div>
             </div>
-          </Card>
+          </div>
         )}
-
-        <Button onClick={() => navigate('/student')}>홈으로</Button>
       </div>
-    </Layout>
+
+      <div className="pb-10">
+        <button
+          onClick={() => navigate('/student')}
+          className="w-full bg-black text-white font-bold py-4 rounded-full text-[15px] tracking-tight active:scale-[0.97] transition"
+        >홈으로</button>
+      </div>
+    </div>
   );
 }

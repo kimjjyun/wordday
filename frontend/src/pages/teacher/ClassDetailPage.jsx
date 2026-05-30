@@ -33,6 +33,7 @@ export default function ClassDetailPage() {
   const [csvResult,     setCsvResult]     = useState(null);
   const [csvError,      setCsvError]      = useState('');
   const [deletingId,    setDeletingId]    = useState(null);
+  const [confirmStudentId, setConfirmStudentId] = useState(null);
 
   const load = () => getClass(id).then(r => setCls(r.data)).finally(() => setLoading(false));
   useEffect(() => { load(); }, [id]);
@@ -79,11 +80,11 @@ export default function ClassDetailPage() {
     finally { setCsvLoading(false); if (fileRef.current) fileRef.current.value = ''; }
   };
 
-  const handleDeleteStudent = async (studentId, name) => {
-    if (!window.confirm(`${name} 학생을 삭제하시겠습니까?`)) return;
+  const handleDeleteStudent = async (studentId) => {
     setDeletingId(studentId);
+    setConfirmStudentId(null);
     try { await deleteStudent(id, studentId); load(); }
-    catch { alert('삭제 중 오류가 발생했습니다.'); }
+    catch { /* no-op */ }
     finally { setDeletingId(null); }
   };
 
@@ -210,10 +211,25 @@ export default function ClassDetailPage() {
                       <span className="font-bold text-[15px] tracking-tight">{s.name}</span>
                       <span className="text-[12px] text-gray-300 font-medium">{s.studentCode}</span>
                     </div>
-                    <button onClick={() => handleDeleteStudent(s.id, s.name)} disabled={deletingId === s.id}
-                      className="text-[11px] font-bold text-gray-300 hover:text-black transition disabled:opacity-40 px-2 py-1">
-                      삭제
-                    </button>
+                    {confirmStudentId === s.id ? (
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleDeleteStudent(s.id)}
+                          disabled={deletingId === s.id}
+                          className="text-[11px] font-bold text-black transition disabled:opacity-40"
+                        >확인</button>
+                        <button
+                          onClick={() => setConfirmStudentId(null)}
+                          className="text-[11px] font-bold text-gray-300 hover:text-black transition"
+                        >취소</button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setConfirmStudentId(s.id)}
+                        disabled={deletingId === s.id}
+                        className="text-[11px] font-bold text-gray-300 hover:text-black transition disabled:opacity-40 px-2 py-1"
+                      >삭제</button>
+                    )}
                   </div>
                   {i < cls.students.length - 1 && <div className="h-px bg-gray-50" />}
                 </div>

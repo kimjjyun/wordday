@@ -1,8 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getTodayWords } from '../../api/study';
-import Layout from '../../components/Layout';
-import Button from '../../components/Button';
 
 function buildQuestions(words) {
   return words.map(word => {
@@ -46,73 +44,131 @@ export default function QuizPage() {
     setTimeout(() => {
       if (index + 1 >= questions.length) setDone(true);
       else { setIndex(i => i + 1); setSelected(null); }
-    }, 800);
+    }, 1500);
   };
 
-  if (loading) return <Layout title="퀴즈" back><p className="text-center py-20 text-gray-400">불러오는 중...</p></Layout>;
+  const restart = () => {
+    setIndex(0); setSelected(null); setScore(0);
+    setWrongList([]); setDone(false);
+    setQuestions(buildQuestions(questions.map(q => q.word)));
+  };
+
+  if (loading) return (
+    <div className="min-h-screen flex items-center justify-center bg-white max-w-lg mx-auto">
+      <div className="flex gap-1.5">
+        {[...Array(5)].map((_, i) => (
+          <div key={i} className="w-1.5 h-1.5 rounded-full bg-gray-200 animate-pulse" style={{ animationDelay: `${i * 0.15}s` }} />
+        ))}
+      </div>
+    </div>
+  );
 
   if (done) return (
-    <Layout title="퀴즈 결과" back>
-      <div className="text-center py-10 space-y-4">
-        <p className="text-5xl">{score === questions.length ? '🏆' : score >= questions.length * 0.7 ? '👍' : '📚'}</p>
-        <p className="text-2xl font-bold">{score} / {questions.length}</p>
-        <p className="text-gray-500">{Math.round((score / Math.max(questions.length, 1)) * 100)}점</p>
+    <div className="min-h-screen flex flex-col bg-white max-w-lg mx-auto">
+      <div className="px-5 pt-4 pb-3 flex items-center gap-4">
+        <button
+          onClick={() => navigate('/student')}
+          className="text-black font-bold text-xl w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition"
+        >←</button>
+      </div>
+      <div className="h-px bg-gray-100" />
+
+      <div className="flex-1 flex flex-col px-5 pt-10 pb-8">
+        <p className="text-[11px] font-bold uppercase tracking-[0.25em] text-gray-300 mb-4">Result</p>
+        <h1 className="text-6xl font-black tracking-tighter leading-none mb-1">
+          {score}<span className="text-gray-200">/{questions.length}</span>
+        </h1>
+        <p className="text-[13px] font-bold text-gray-300 mt-2">
+          {Math.round((score / Math.max(questions.length, 1)) * 100)}점
+        </p>
+
         {wrongList.length > 0 && (
-          <div className="bg-red-50 rounded-xl p-4 text-left space-y-2">
-            <p className="font-semibold text-red-600 text-sm">틀린 단어</p>
-            {wrongList.map(w => (
-              <div key={w.id} className="flex justify-between text-sm">
-                <span>{w.english}</span><span className="text-gray-500">{w.korean}</span>
-              </div>
-            ))}
+          <div className="mt-8">
+            <div className="h-px bg-gray-100 mb-5" />
+            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-gray-300 mb-3">다시 볼 단어</p>
+            <div className="space-y-0">
+              {wrongList.map((w, i) => (
+                <div key={w.id}>
+                  <div className="flex justify-between items-baseline py-3">
+                    <span className="font-bold text-[15px] tracking-tight text-black">{w.english}</span>
+                    <span className="text-[13px] text-gray-400 font-medium">{w.korean}</span>
+                  </div>
+                  {i < wrongList.length - 1 && <div className="h-px bg-gray-50" />}
+                </div>
+              ))}
+            </div>
           </div>
         )}
-        <div className="space-y-2">
-          <Button onClick={() => { setIndex(0); setSelected(null); setScore(0); setWrongList([]); setDone(false); setQuestions(buildQuestions(questions.map(q => q.word))); }}>
-            다시 풀기
-          </Button>
-          <Button variant="secondary" onClick={() => navigate('/student')}>홈으로</Button>
+
+        <div className="mt-auto pt-8 space-y-2.5">
+          <button
+            onClick={restart}
+            className="w-full bg-black text-white font-bold py-4 rounded-full text-[15px] tracking-tight active:scale-[0.97] transition"
+          >다시 풀기</button>
+          <button
+            onClick={() => navigate('/student')}
+            className="w-full bg-white text-black border-2 border-black font-bold py-4 rounded-full text-[15px] tracking-tight active:scale-[0.97] transition"
+          >홈으로</button>
         </div>
       </div>
-    </Layout>
+    </div>
   );
 
   if (!q) return null;
 
   return (
-    <Layout title="퀴즈" back>
-      <div className="mb-4">
-        <div className="flex justify-between text-sm text-gray-500 mb-1">
-          <span>{index + 1} / {questions.length}</span>
-          <span>점수 {score}</span>
+    <div className="min-h-screen flex flex-col bg-white max-w-lg mx-auto">
+      {/* 헤더 */}
+      <div className="px-5 pt-4 pb-3 flex items-center gap-4">
+        <button
+          onClick={() => navigate('/student')}
+          className="text-black font-bold text-xl w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition"
+        >←</button>
+        <div className="flex-1">
+          <div className="w-full bg-gray-100 rounded-full h-1 overflow-hidden">
+            <div
+              className="bg-black h-1 rounded-full transition-all duration-500"
+              style={{ width: `${(index / questions.length) * 100}%` }}
+            />
+          </div>
         </div>
-        <div className="w-full bg-gray-200 rounded-full h-2">
-          <div className="bg-indigo-500 h-2 rounded-full transition-all" style={{ width: `${((index) / questions.length) * 100}%` }} />
-        </div>
+        <span className="text-[11px] font-bold text-gray-300 tracking-wider min-w-[48px] text-right">
+          {index + 1}/{questions.length} · {score}점
+        </span>
       </div>
 
-      <div className="bg-indigo-50 rounded-2xl p-6 text-center mb-6">
-        <p className="text-3xl font-bold text-indigo-700">{q.word.english}</p>
-      </div>
+      <div className="flex-1 flex flex-col px-5 pb-8 pt-6">
+        {/* 단어 카드 */}
+        <div className="flex-1 flex items-center mb-8">
+          <div className="w-full border border-gray-100 rounded-[28px] flex flex-col items-center justify-center p-8 text-center gap-6" style={{ minHeight: '200px' }}>
+            <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-gray-200">뜻을 고르세요</p>
+            <p className="text-5xl font-black tracking-tighter text-black leading-tight">
+              {q.word.english}
+            </p>
+          </div>
+        </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        {q.options.map(opt => {
-          let style = 'bg-white border-2 border-gray-200 text-gray-700';
-          if (selected) {
-            if (opt === q.answer) style = 'bg-emerald-500 border-emerald-500 text-white';
-            else if (opt === selected) style = 'bg-red-500 border-red-500 text-white';
-          }
-          return (
-            <button
-              key={opt}
-              onClick={() => handleSelect(opt)}
-              className={`rounded-xl py-4 px-3 font-medium text-sm transition ${style}`}
-            >
-              {opt}
-            </button>
-          );
-        })}
+        {/* 보기 */}
+        <div className="grid grid-cols-2 gap-2.5">
+          {q.options.map(opt => {
+            let cls = 'border-2 border-gray-100 text-gray-700 bg-white';
+            if (selected) {
+              if (opt === q.answer) cls = 'bg-black border-black text-white';
+              else if (opt === selected) cls = 'bg-gray-100 border-gray-100 text-gray-300 line-through';
+              else cls = 'border-gray-100 text-gray-200 bg-white';
+            }
+            return (
+              <button
+                key={opt}
+                onClick={() => handleSelect(opt)}
+                className={`rounded-2xl py-4 px-3 font-bold text-[14px] tracking-tight transition ${cls}`}
+              >
+                {opt}
+              </button>
+            );
+          })}
+        </div>
       </div>
-    </Layout>
+    </div>
   );
 }

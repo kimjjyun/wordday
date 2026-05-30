@@ -88,10 +88,15 @@ export default function SoloFlashcard() {
           </div>
         )}
       </div>
-      <div className="pb-10">
-        <button onClick={() => navigate('/solo')} className="w-full bg-black text-white font-bold py-4 rounded-full text-[15px] tracking-tight active:scale-[0.97] transition">
-          홈으로
-        </button>
+      <div className="pb-10 space-y-2.5">
+        <button
+          onClick={() => { setIndex(0); setFlipped(false); setRated(null); setDone(false); setWrong([]); }}
+          className="w-full bg-black text-white font-bold py-4 rounded-full text-[15px] tracking-tight active:scale-[0.97] transition"
+        >다시 하기</button>
+        <button
+          onClick={() => navigate('/solo')}
+          className="w-full bg-white text-black border-2 border-black font-bold py-4 rounded-full text-[15px] tracking-tight active:scale-[0.97] transition"
+        >홈으로</button>
       </div>
     </div>
   );
@@ -124,7 +129,6 @@ export default function SoloFlashcard() {
                 className="border border-gray-100 rounded-[28px] flex flex-col items-center justify-center p-8 text-center bg-white">
                 <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-gray-200 mb-8">Solo Study</p>
                 <p className="text-5xl font-black tracking-tighter text-black leading-tight">{current.english}</p>
-                <p className="text-[12px] font-medium text-gray-200 mt-8">tap to flip</p>
               </div>
               <div style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', transform: 'rotateY(180deg)', position: 'absolute', inset: 0 }}
                 className="bg-black rounded-[28px] flex flex-col items-center justify-center p-8 text-center">

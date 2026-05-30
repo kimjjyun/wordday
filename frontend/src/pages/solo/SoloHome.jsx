@@ -114,9 +114,11 @@ export default function SoloHome() {
               <button
                 onClick={() => navigate('/solo/flashcard', { state: { category: catFilter } })}
                 className="w-full bg-black text-white font-bold py-4 rounded-full text-[15px] tracking-tight active:scale-[0.97] transition"
-              >
-                암기하기
-              </button>
+              >암기하기</button>
+              <button
+                onClick={() => navigate('/solo/quiz', { state: { category: catFilter } })}
+                className="w-full bg-white text-black border-2 border-black font-bold py-4 rounded-full text-[15px] tracking-tight active:scale-[0.97] transition"
+              >퀴즈 풀기</button>
             </div>
           </>
         )}

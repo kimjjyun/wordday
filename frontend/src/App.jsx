@@ -3,6 +3,11 @@ import { useAuthStore } from './store/authStore';
 
 import LoginPage from './pages/LoginPage';
 
+// 솔로 (비로그인)
+import SoloHome      from './pages/solo/SoloHome';
+import SoloFlashcard from './pages/solo/SoloFlashcard';
+import SoloQuiz      from './pages/solo/SoloQuiz';
+
 // 학생
 import StudentHome     from './pages/student/StudentHome';
 import FlashcardPage   from './pages/student/FlashcardPage';
@@ -30,6 +35,11 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+
+        {/* 솔로 (비로그인) */}
+        <Route path="/solo"           element={<SoloHome />} />
+        <Route path="/solo/flashcard" element={<SoloFlashcard />} />
+        <Route path="/solo/quiz"      element={<SoloQuiz />} />
 
         {/* 학생 */}
         <Route path="/student"             element={<RequireAuth role="student"><StudentHome /></RequireAuth>} />

@@ -46,6 +46,8 @@ export default function WordBookPage() {
   const [importError,   setImportError]   = useState('');
 
   const [deletingId, setDeletingId] = useState(null);
+  const [confirmWordId, setConfirmWordId] = useState(null);
+  const [showAddWords, setShowAddWords] = useState(false);
 
   const load = () => getWordBook(id).then(r => setWb(r.data)).finally(() => setLoading(false));
   useEffect(() => { load(); }, [id]);
@@ -95,10 +97,10 @@ export default function WordBookPage() {
   };
 
   const handleDeleteWord = async (wordId) => {
-    if (!window.confirm('이 단어를 삭제하시겠습니까?')) return;
     setDeletingId(wordId);
+    setConfirmWordId(null);
     try { await deleteWord(id, wordId); load(); }
-    catch { alert('삭제 중 오류가 발생했습니다.'); }
+    catch { /* no-op */ }
     finally { setDeletingId(null); }
   };
 
@@ -139,15 +141,23 @@ export default function WordBookPage() {
         {/* 테스트 시작 */}
         <button
           onClick={handleStartTest}
-          className="w-full bg-black text-white font-bold py-4 rounded-full text-[15px] tracking-tight active:scale-[0.97] transition mb-6"
+          disabled={!wb.words?.length}
+          className="w-full bg-black text-white font-bold py-4 rounded-full text-[15px] tracking-tight active:scale-[0.97] transition mb-6 disabled:opacity-40 disabled:cursor-not-allowed"
         >
           조회 테스트 시작
         </button>
 
         {/* ── 단어 추가 ─────────────────────────────── */}
         <div className="mb-6">
-          <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-gray-300 mb-3">Add Words</p>
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-gray-300">Add Words</p>
+            <button
+              onClick={() => setShowAddWords(v => !v)}
+              className="text-[12px] font-bold text-black border border-gray-200 rounded-full px-3 py-1 hover:border-gray-400 transition"
+            >{showAddWords ? '닫기' : '+ 추가'}</button>
+          </div>
 
+          {showAddWords && <>
           {/* 탭 */}
           <div className="flex gap-0 border-b border-gray-100 mb-4">
             {TABS.map(({ key, label }) => (
@@ -283,6 +293,7 @@ export default function WordBookPage() {
               {importResult && <p className="text-[12px] font-medium text-gray-400 text-center">{importResult.imported}개 업로드 완료{importResult.errors.length > 0 ? ` · 오류 ${importResult.errors.length}건` : ''}</p>}
             </div>
           )}
+          </>}
         </div>
 
         <div className="h-px bg-gray-100 mb-5" />
@@ -305,10 +316,25 @@ export default function WordBookPage() {
                       <span className="font-bold text-[15px] text-black tracking-tight">{w.english}</span>
                       <span className="text-[13px] text-gray-400 font-medium ml-3 shrink-0">{w.korean}</span>
                     </div>
-                    <button onClick={() => handleDeleteWord(w.id)} disabled={deletingId === w.id}
-                      className="text-[11px] font-bold text-gray-300 hover:text-black transition disabled:opacity-40 px-1 shrink-0">
-                      ×
-                    </button>
+                    {confirmWordId === w.id ? (
+                      <div className="flex items-center gap-2 shrink-0">
+                        <button
+                          onClick={() => handleDeleteWord(w.id)}
+                          disabled={deletingId === w.id}
+                          className="text-[11px] font-bold text-black transition disabled:opacity-40"
+                        >확인</button>
+                        <button
+                          onClick={() => setConfirmWordId(null)}
+                          className="text-[11px] font-bold text-gray-300 hover:text-black transition"
+                        >취소</button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setConfirmWordId(w.id)}
+                        disabled={deletingId === w.id}
+                        className="text-[11px] font-bold text-gray-300 hover:text-black transition disabled:opacity-40 px-1 shrink-0"
+                      >×</button>
+                    )}
                   </div>
                   {i < wb.words.length - 1 && <div className="h-px bg-gray-50 ml-8" />}
                 </div>
