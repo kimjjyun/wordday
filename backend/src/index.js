@@ -16,14 +16,27 @@ const registerTestSocket = require('./socket/testSocket');
 const app = express();
 const server = http.createServer(app);
 
+// 허용 오리진 목록 (쉼표로 여러 개 가능, 끝의 / 는 무시)
+const allowedOrigins = (process.env.FRONTEND_URL || '')
+  .split(',')
+  .map(o => o.trim().replace(/\/$/, ''))
+  .filter(Boolean);
+
+const corsOrigin = (origin, callback) => {
+  // 서버-서버 요청(origin 없음) 또는 FRONTEND_URL 미설정 시 허용
+  if (!origin || allowedOrigins.length === 0) return callback(null, true);
+  const clean = origin.replace(/\/$/, '');
+  return callback(null, allowedOrigins.includes(clean));
+};
+
 const io = new Server(server, {
   cors: {
-    origin: process.env.FRONTEND_URL,
+    origin: corsOrigin,
     methods: ['GET', 'POST'],
   },
 });
 
-app.use(cors({ origin: process.env.FRONTEND_URL }));
+app.use(cors({ origin: corsOrigin }));
 app.use(express.json());
 
 // JSON 파싱 에러를 잡아서 서버가 죽지 않도록 처리

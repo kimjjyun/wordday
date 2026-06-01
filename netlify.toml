@@ -4,4 +4,12 @@
   publish = "dist"
 
 [build.environment]
-  NODE_VERSION = "18"
+  NODE_VERSION    = "18"
+  VITE_API_URL    = "https://wordday-backend.onrender.com/api"
+  VITE_SOCKET_URL = "https://wordday-backend.onrender.com"
+
+# SPA 라우팅: 새로고침/딥링크 시 index.html로 폴백
+[[redirects]]
+  from   = "/*"
+  to     = "/index.html"
+  status = 200
