@@ -1,5 +1,7 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
+const { Resend } = require('resend');
 const { PrismaClient } = require('@prisma/client');
 
 const prisma = new PrismaClient();
@@ -96,4 +98,67 @@ async function studentLogin(req, res, next) {
   }
 }
 
-module.exports = { teacherRegister, teacherLogin, studentLogin };
+async function forgotPassword(req, res, next) {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: '이메일을 입력하세요.' });
+
+    const teacher = await prisma.teacher.findUnique({ where: { email } });
+    if (!teacher) return res.json({ message: '이메일을 확인하세요.' });
+
+    const token = crypto.randomBytes(32).toString('hex');
+    const expiry = new Date(Date.now() + 60 * 60 * 1000); // 1시간
+
+    await prisma.teacher.update({
+      where: { email },
+      data: { resetToken: token, resetTokenExpiry: expiry },
+    });
+
+    const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${token}`;
+    const resend = new Resend(process.env.RESEND_API_KEY);
+    const from = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
+
+    await resend.emails.send({
+      from: `WordDay <${from}>`,
+      to: email,
+      subject: '[WordDay] 비밀번호 재설정',
+      html: `
+        <div style="font-family:sans-serif;max-width:420px;margin:0 auto;padding:40px 20px;">
+          <h2 style="font-size:28px;font-weight:900;margin-bottom:8px;">WordDay.</h2>
+          <p style="color:#555;margin-bottom:32px;">비밀번호 재설정을 요청하셨습니다.<br/>아래 버튼을 눌러 1시간 이내에 재설정하세요.</p>
+          <a href="${resetUrl}" style="display:inline-block;background:#000;color:#fff;padding:14px 28px;border-radius:100px;text-decoration:none;font-weight:700;font-size:15px;">비밀번호 재설정</a>
+          <p style="color:#bbb;font-size:12px;margin-top:32px;">요청하지 않으셨다면 이 이메일을 무시하세요.</p>
+        </div>
+      `,
+    });
+
+    res.json({ message: '이메일을 확인하세요.' });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function resetPassword(req, res, next) {
+  try {
+    const { token, password } = req.body;
+    if (!token || !password) return res.status(400).json({ error: '올바르지 않은 요청입니다.' });
+    if (password.length < 6) return res.status(400).json({ error: '비밀번호는 6자 이상이어야 합니다.' });
+
+    const teacher = await prisma.teacher.findFirst({
+      where: { resetToken: token, resetTokenExpiry: { gt: new Date() } },
+    });
+    if (!teacher) return res.status(400).json({ error: '링크가 만료되었거나 올바르지 않습니다.' });
+
+    const hashed = await bcrypt.hash(password, 10);
+    await prisma.teacher.update({
+      where: { id: teacher.id },
+      data: { password: hashed, resetToken: null, resetTokenExpiry: null },
+    });
+
+    res.json({ message: '비밀번호가 변경되었습니다.' });
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { teacherRegister, teacherLogin, studentLogin, forgotPassword, resetPassword };

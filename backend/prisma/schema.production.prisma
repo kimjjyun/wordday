@@ -8,12 +8,14 @@ datasource db {
 }
 
 model Teacher {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  password  String
-  name      String
-  classes   Class[]
-  createdAt DateTime @default(now())
+  id               String    @id @default(cuid())
+  email            String    @unique
+  password         String
+  name             String
+  classes          Class[]
+  createdAt        DateTime  @default(now())
+  resetToken       String?
+  resetTokenExpiry DateTime?
 }
 
 model Class {

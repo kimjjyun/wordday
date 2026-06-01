@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
-import { teacherLogin, teacherRegister, studentLogin } from '../api/auth';
+import { teacherLogin, teacherRegister, studentLogin, forgotPassword } from '../api/auth';
 import { useGuestStore } from '../store/guestStore';
 
 const TABS = [
@@ -14,11 +14,28 @@ export default function LoginPage() {
   const [tab,  setTab]  = useState('student');
   const [form, setForm] = useState({ email: '', password: '', name: '', studentCode: '' });
   const [error,   setError]   = useState('');
+  const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showForgot, setShowForgot] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
   const { login } = useAuthStore();
   const { enter }  = useGuestStore();
   const navigate  = useNavigate();
   const set = k => e => setForm(f => ({ ...f, [k]: e.target.value }));
+
+  const handleForgot = async e => {
+    e.preventDefault();
+    setError(''); setLoading(true);
+    try {
+      await forgotPassword({ email: forgotEmail });
+      setSuccess('이메일을 확인하세요. 링크는 1시간 동안 유효합니다.');
+      setForgotEmail('');
+    } catch {
+      setError('오류가 발생했습니다.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSubmit = async e => {
     e.preventDefault();
@@ -74,7 +91,39 @@ export default function LoginPage() {
         ))}
       </div>
 
-      {/* 폼 */}
+      {/* 비밀번호 찾기 폼 */}
+      {showForgot ? (
+        <form onSubmit={handleForgot} className="flex-1 space-y-3">
+          <p className="text-[13px] text-gray-400 font-medium pb-1">
+            가입한 이메일을 입력하면 재설정 링크를 보내드립니다.
+          </p>
+          <input
+            className={inputCls}
+            type="email"
+            placeholder="이메일"
+            value={forgotEmail}
+            onChange={e => setForgotEmail(e.target.value)}
+            required
+          />
+          {error && (
+            <p className="text-[13px] text-black bg-gray-50 border border-gray-100 rounded-2xl px-4 py-3 text-center font-medium">{error}</p>
+          )}
+          {success && (
+            <p className="text-[13px] text-black bg-gray-50 border border-gray-100 rounded-2xl px-4 py-3 text-center font-medium">{success}</p>
+          )}
+          <div className="pt-2 space-y-2">
+            <button type="submit" disabled={loading}
+              className="w-full bg-black text-white font-bold py-4 rounded-full text-[15px] tracking-tight active:scale-[0.97] transition disabled:opacity-40">
+              {loading ? '...' : '링크 전송'}
+            </button>
+            <button type="button" onClick={() => { setShowForgot(false); setError(''); setSuccess(''); }}
+              className="w-full border border-gray-200 text-gray-400 font-bold py-4 rounded-full text-[14px] tracking-tight hover:border-gray-400 hover:text-black transition">
+              돌아가기
+            </button>
+          </div>
+        </form>
+      ) : (
+      /* 일반 로그인 폼 */
       <form onSubmit={handleSubmit} className="flex-1 space-y-3">
         {tab === 'register' && (
           <input className={inputCls} placeholder="이름" value={form.name} onChange={set('name')} required />
@@ -93,7 +142,7 @@ export default function LoginPage() {
           </p>
         )}
 
-        <div className="pt-2">
+        <div className="pt-2 space-y-2">
           <button
             type="submit"
             disabled={loading}
@@ -101,8 +150,15 @@ export default function LoginPage() {
           >
             {loading ? '...' : tab === 'register' ? '가입하기' : '로그인'}
           </button>
+          {tab === 'teacher' && (
+            <button type="button" onClick={() => { setShowForgot(true); setError(''); }}
+              className="w-full text-[12px] text-gray-300 hover:text-gray-500 transition font-medium py-1">
+              비밀번호를 잊으셨나요?
+            </button>
+          )}
         </div>
       </form>
+      )}
 
       <div className="pb-10 pt-6 text-center space-y-3">
         <div className="flex items-center gap-3">
