@@ -153,9 +153,9 @@ export default function QuizPage() {
           {q.options.map(opt => {
             let cls = 'border-2 border-gray-100 text-gray-700 bg-white';
             if (selected) {
-              if (opt === q.answer) cls = 'bg-black border-black text-white';
-              else if (opt === selected) cls = 'bg-gray-100 border-gray-100 text-gray-300 line-through';
-              else cls = 'border-gray-100 text-gray-200 bg-white';
+              if (opt === q.answer)      cls = 'bg-black border-black text-white';
+              else if (opt === selected) cls = 'bg-gray-100 border-gray-100 text-gray-400 line-through';
+              else                       cls = 'border-gray-100 text-gray-200 bg-white';
             }
             return (
               <button
@@ -163,6 +163,8 @@ export default function QuizPage() {
                 onClick={() => handleSelect(opt)}
                 className={`rounded-2xl py-4 px-3 font-bold text-[14px] tracking-tight transition ${cls}`}
               >
+                {selected && opt === q.answer && <span className="mr-1">✓</span>}
+                {selected && opt === selected && opt !== q.answer && <span className="mr-1">✗</span>}
                 {opt}
               </button>
             );
