@@ -37,12 +37,15 @@ const io = new Server(server, {
 });
 
 app.use(cors({ origin: corsOrigin }));
-app.use(express.json());
+app.use(express.json({ limit: '5mb' }));
 
 // JSON 파싱 에러를 잡아서 서버가 죽지 않도록 처리
 app.use((err, req, res, next) => {
   if (err.type === 'entity.parse.failed') {
     return res.status(400).json({ error: '잘못된 JSON 형식입니다.' });
+  }
+  if (err.type === 'entity.too.large') {
+    return res.status(413).json({ error: '요청 데이터가 너무 큽니다.' });
   }
   next(err);
 });
