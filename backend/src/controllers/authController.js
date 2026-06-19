@@ -161,4 +161,25 @@ async function resetPassword(req, res, next) {
   }
 }
 
-module.exports = { teacherRegister, teacherLogin, studentLogin, forgotPassword, resetPassword };
+async function changeStudentPassword(req, res, next) {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ error: '현재 비밀번호와 새 비밀번호를 입력하세요.' });
+    }
+    if (newPassword.length < 4) {
+      return res.status(400).json({ error: '새 비밀번호는 4자 이상이어야 합니다.' });
+    }
+    const student = await prisma.student.findUnique({ where: { id: req.user.sub } });
+    if (!student || !(await bcrypt.compare(currentPassword, student.password))) {
+      return res.status(401).json({ error: '현재 비밀번호가 올바르지 않습니다.' });
+    }
+    const hashed = await bcrypt.hash(newPassword, 10);
+    await prisma.student.update({ where: { id: student.id }, data: { password: hashed } });
+    res.json({ message: '비밀번호가 변경되었습니다.' });
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { teacherRegister, teacherLogin, studentLogin, forgotPassword, resetPassword, changeStudentPassword };
