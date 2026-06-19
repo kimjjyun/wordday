@@ -82,7 +82,7 @@ module.exports = function registerTestSocket(io) {
             }
           }
           const options = [...wrong, word.korean].sort(() => Math.random() - 0.5);
-          return { id: word.id, english: word.english, options };
+          return { id: word.id, english: word.english, answer: word.korean, options };
         });
 
         io.to(test.roomCode).emit('test:started', { words: wordsWithOptions });

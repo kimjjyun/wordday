@@ -7,11 +7,13 @@ import { getTestSocket, setTestSocket, clearTestSocket } from '../../lib/testSoc
 export default function TestActivePage() {
   const navigate = useNavigate();
   const { user } = useAuthStore();
-  const [words, setWords] = useState([]);
-  const [answers, setAnswers] = useState({});
+  const [words, setWords]               = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [submitted, setSubmitted] = useState(false);
-  const [advancing, setAdvancing] = useState(false);
+  const [answers, setAnswers]           = useState({});   // wordId → selected option
+  const [results, setResults]           = useState({});   // wordId → 'correct' | 'wrong'
+  const [score, setScore]               = useState(0);
+  const [submitted, setSubmitted]       = useState(false);
+  const [advancing, setAdvancing]       = useState(false);
 
   const answersRef   = useRef({});
   const wordsRef     = useRef([]);
@@ -41,8 +43,8 @@ export default function TestActivePage() {
       navigate('/student/test/result');
     });
 
-    socket.on('submit:confirmed', ({ score, total }) => {
-      sessionStorage.setItem('my_score', JSON.stringify({ score, total }));
+    socket.on('submit:confirmed', ({ score: s, total }) => {
+      sessionStorage.setItem('my_score', JSON.stringify({ score: s, total }));
       setSubmitted(true);
     });
 
@@ -64,12 +66,16 @@ export default function TestActivePage() {
     });
   };
 
-  const handleSelect = (wordId, option) => {
+  const handleSelect = (word, option) => {
     if (submitted || advancing) return;
 
-    const newAnswers = { ...answersRef.current, [wordId]: option };
+    const isCorrect = option === word.answer;
+    const newAnswers = { ...answersRef.current, [word.id]: option };
     answersRef.current = newAnswers;
+
     setAnswers(newAnswers);
+    setResults(r => ({ ...r, [word.id]: isCorrect ? 'correct' : 'wrong' }));
+    if (isCorrect) setScore(s => s + 1);
     setAdvancing(true);
 
     setTimeout(() => {
@@ -79,10 +85,11 @@ export default function TestActivePage() {
       } else {
         setCurrentIndex(i => i + 1);
       }
-    }, 600);
+    }, 1200);
   };
 
   const currentWord = words[currentIndex];
+  const totalAnswered = Object.keys(answers).length;
 
   if (words.length === 0) return (
     <div className="min-h-screen flex items-center justify-center bg-white max-w-lg mx-auto">
@@ -98,53 +105,69 @@ export default function TestActivePage() {
   return (
     <div className="min-h-screen flex flex-col bg-white max-w-lg mx-auto">
 
-      {/* 진행 바 */}
-      <div className="px-5 pt-4 pb-3 flex items-center gap-4">
-        <div className="flex-1 bg-gray-100 rounded-full h-1 overflow-hidden">
-          <div
-            className="bg-black h-1 rounded-full transition-all duration-700"
-            style={{ width: `${((currentIndex + 1) / words.length) * 100}%` }}
-          />
+      {/* 상단 헤더: 진행바 + 점수 */}
+      <div className="px-5 pt-4 pb-3">
+        <div className="flex items-center gap-3 mb-2">
+          <div className="flex-1 bg-gray-100 rounded-full h-1.5 overflow-hidden">
+            <div
+              className="bg-black h-1.5 rounded-full transition-all duration-700"
+              style={{ width: `${((currentIndex + 1) / words.length) * 100}%` }}
+            />
+          </div>
+          <span className="text-[11px] font-bold text-gray-400 tracking-wider shrink-0">
+            {currentIndex + 1}/{words.length}
+          </span>
         </div>
-        <span className="text-[11px] font-bold text-gray-300 tracking-wider">
-          {currentIndex + 1}/{words.length}
-        </span>
+
+        {/* 실시간 점수 */}
+        {totalAnswered > 0 && (
+          <div className="flex items-center justify-end gap-1.5">
+            <span className="text-[12px] font-black text-black">{score}</span>
+            <span className="text-[11px] text-gray-300 font-medium">/ {totalAnswered} 맞춤</span>
+          </div>
+        )}
       </div>
 
-      <div className="flex-1 flex flex-col px-5 pb-8 pt-2">
+      <div className="flex-1 flex flex-col px-5 pb-8 pt-1">
 
+        {/* 현재 문제 */}
         {currentWord && !submitted && (
           <>
             <div
               className="border border-gray-100 rounded-[28px] flex flex-col items-center justify-center p-8 text-center mb-5"
-              style={{ minHeight: '170px' }}
+              style={{ minHeight: '160px' }}
             >
               <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-gray-200 mb-3">뜻을 고르세요</p>
               <p className="text-5xl font-black tracking-tighter text-black leading-tight">
                 {currentWord.english}
               </p>
-              {advancing && (
-                <div className="flex gap-1 mt-4 justify-center">
-                  {[...Array(3)].map((_, i) => (
-                    <div key={i} className="w-1.5 h-1.5 rounded-full bg-gray-300 animate-pulse"
-                         style={{ animationDelay: `${i * 0.15}s` }} />
-                  ))}
-                </div>
-              )}
             </div>
 
             <div className="grid grid-cols-2 gap-2.5 mb-5">
               {(currentWord.options ?? []).map((opt, i) => {
-                const isSelected = answers[currentWord.id] === opt;
+                const selected = answers[currentWord.id] === opt;
+                const isCorrectOpt = opt === currentWord.answer;
+                const result = results[currentWord.id];
+
+                let cls = 'border-gray-100 text-gray-700 bg-white active:bg-gray-50 disabled:opacity-60';
+                if (result) {
+                  if (isCorrectOpt) {
+                    // 정답 버튼은 항상 초록
+                    cls = 'bg-emerald-500 border-emerald-500 text-white';
+                  } else if (selected) {
+                    // 내가 고른 오답은 빨강
+                    cls = 'bg-red-400 border-red-400 text-white';
+                  } else {
+                    cls = 'border-gray-100 text-gray-300 bg-white';
+                  }
+                }
+
                 return (
                   <button
                     key={i}
-                    onClick={() => handleSelect(currentWord.id, opt)}
-                    disabled={advancing}
-                    className={`rounded-2xl py-4 px-3 font-bold text-[14px] tracking-tight transition border-2
-                      ${isSelected
-                        ? 'bg-black border-black text-white'
-                        : 'border-gray-100 text-gray-700 bg-white active:bg-gray-50 disabled:opacity-60'}`}
+                    onClick={() => handleSelect(currentWord, opt)}
+                    disabled={!!result || advancing}
+                    className={`rounded-2xl py-4 px-3 font-bold text-[14px] tracking-tight transition border-2 ${cls}`}
                   >
                     {opt}
                   </button>
@@ -152,37 +175,77 @@ export default function TestActivePage() {
               })}
             </div>
 
-            {/* 이전 단어들 답 목록 */}
+            {/* 정오 피드백 메시지 */}
+            {results[currentWord.id] && (
+              <div className={`text-center py-2.5 rounded-2xl mb-4 ${
+                results[currentWord.id] === 'correct'
+                  ? 'bg-emerald-50 text-emerald-600'
+                  : 'bg-red-50 text-red-500'
+              }`}>
+                <span className="font-black text-[15px]">
+                  {results[currentWord.id] === 'correct' ? '✓ 정답!' : '✗ 오답'}
+                </span>
+                {results[currentWord.id] === 'wrong' && (
+                  <span className="text-[13px] font-medium ml-2">
+                    정답: {currentWord.answer}
+                  </span>
+                )}
+              </div>
+            )}
+
+            {/* 이전 문제 답 목록 */}
             {currentIndex > 0 && (
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-300 mb-2">선택한 답</p>
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-300 mb-2">
+                  이전 답 · {score}/{currentIndex} 맞춤
+                </p>
                 <div className="space-y-1.5">
-                  {words.slice(0, currentIndex).map(w => (
-                    <div key={w.id} className="flex justify-between items-center px-4 py-2.5 bg-gray-50 rounded-xl">
-                      <span className="font-bold text-[13px] text-black">{w.english}</span>
-                      <span className={`text-[13px] font-medium ${answers[w.id] ? 'text-gray-500' : 'text-gray-200'}`}>
-                        {answers[w.id] ?? '—'}
-                      </span>
-                    </div>
-                  ))}
+                  {words.slice(0, currentIndex).map(w => {
+                    const r = results[w.id];
+                    return (
+                      <div key={w.id}
+                           className={`flex justify-between items-center px-4 py-2.5 rounded-xl ${
+                             r === 'correct' ? 'bg-emerald-50' : r === 'wrong' ? 'bg-red-50' : 'bg-gray-50'
+                           }`}>
+                        <span className="font-bold text-[13px] text-black">{w.english}</span>
+                        <div className="flex items-center gap-2">
+                          <span className={`text-[13px] font-medium ${
+                            r === 'correct' ? 'text-emerald-600' : r === 'wrong' ? 'text-red-400 line-through' : 'text-gray-300'
+                          }`}>
+                            {answers[w.id] ?? '—'}
+                          </span>
+                          {r === 'wrong' && (
+                            <span className="text-[12px] font-bold text-emerald-600">{w.answer}</span>
+                          )}
+                          <span className="text-[13px]">{r === 'correct' ? '✓' : r === 'wrong' ? '✗' : ''}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}
           </>
         )}
 
-        {/* 제출 완료 */}
+        {/* 제출 완료 대기 */}
         {submitted && (
-          <div className="flex-1 flex flex-col items-center justify-center text-center gap-4">
+          <div className="flex-1 flex flex-col items-center justify-center text-center gap-5">
+            <div className="border border-gray-100 rounded-[28px] px-8 py-6 w-full text-center">
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-300 mb-3">내 결과</p>
+              <p className="text-6xl font-black tracking-tighter text-black">{score}</p>
+              <p className="text-[13px] text-gray-400 font-medium mt-1">/ {words.length}문제 정답</p>
+              <p className="text-[12px] font-black text-gray-300 mt-2">
+                {Math.round((score / words.length) * 100)}점
+              </p>
+            </div>
             <div className="flex gap-1.5 justify-center">
               {[...Array(5)].map((_, i) => (
                 <div key={i} className="w-2 h-2 rounded-full bg-black animate-pulse"
                      style={{ animationDelay: `${i * 0.2}s` }} />
               ))}
             </div>
-            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-gray-300">Submitted</p>
-            <p className="text-xl font-black tracking-tighter">제출 완료!</p>
-            <p className="text-[13px] text-gray-300 font-medium">선생님이 종료하면 결과가 표시돼요</p>
+            <p className="text-[13px] text-gray-300 font-medium">선생님이 종료하면 전체 결과가 표시돼요</p>
           </div>
         )}
       </div>
