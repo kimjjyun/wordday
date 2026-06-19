@@ -53,16 +53,16 @@ async function main() {
 
   // 단어 10개
   const words = [
-    { english: 'ambiguous',    korean: '모호한',      example: 'The result was ambiguous.' },
-    { english: 'meticulous',   korean: '꼼꼼한',      example: 'She is meticulous.' },
-    { english: 'eloquent',     korean: '유창한',      example: 'He gave an eloquent speech.' },
-    { english: 'contemplate',  korean: '심사숙고하다', example: 'He contemplated the decision.' },
-    { english: 'exemplify',    korean: '예시하다',    example: 'This story exemplifies courage.' },
-    { english: 'persevere',    korean: '인내하다',    example: 'You must persevere.' },
-    { english: 'inevitable',   korean: '불가피한',    example: 'Change is inevitable.' },
-    { english: 'concise',      korean: '간결한',      example: 'Be concise in your writing.' },
-    { english: 'diligent',     korean: '근면한',      example: 'She is a diligent student.' },
-    { english: 'profound',     korean: '심오한',      example: 'A profound silence fell.' },
+    { english: 'ambiguous',   korean: '모호한',       pronunciation: '/æmˈbɪɡjuəs/',   example: 'The result was ambiguous.' },
+    { english: 'meticulous',  korean: '꼼꼼한',       pronunciation: '/məˈtɪkjʊləs/',  example: 'She is meticulous.' },
+    { english: 'eloquent',    korean: '유창한',       pronunciation: '/ˈɛləkwənt/',    example: 'He gave an eloquent speech.' },
+    { english: 'contemplate', korean: '심사숙고하다', pronunciation: '/ˈkɒntəmpleɪt/', example: 'He contemplated the decision.' },
+    { english: 'exemplify',   korean: '예시하다',     pronunciation: '/ɪɡˈzɛmplɪfaɪ/', example: 'This story exemplifies courage.' },
+    { english: 'persevere',   korean: '인내하다',     pronunciation: '/ˌpɜːrsɪˈvɪər/', example: 'You must persevere.' },
+    { english: 'inevitable',  korean: '불가피한',     pronunciation: '/ɪnˈɛvɪtəbl/',   example: 'Change is inevitable.' },
+    { english: 'concise',     korean: '간결한',       pronunciation: '/kənˈsaɪs/',     example: 'Be concise in your writing.' },
+    { english: 'diligent',    korean: '근면한',       pronunciation: '/ˈdɪlɪdʒənt/',   example: 'She is a diligent student.' },
+    { english: 'profound',    korean: '심오한',       pronunciation: '/prəˈfaʊnd/',    example: 'A profound silence fell.' },
   ];
 
   await prisma.word.deleteMany({ where: { wordBookId: wb.id } });

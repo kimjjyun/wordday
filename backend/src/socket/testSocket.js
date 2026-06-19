@@ -50,11 +50,16 @@ module.exports = function registerTestSocket(io) {
         const words = test.wordBook.words;
         const allKoreans = [...new Set(words.map(w => w.korean))];
 
-        const wordsWithOptions = words.map(word => {
-          const wrong = allKoreans
-            .filter(k => k !== word.korean)
-            .sort(() => Math.random() - 0.5)
-            .slice(0, 3);
+        // 풀을 한 번만 셔플 후 stride-3 오프셋으로 순환해 중복 선택지 최소화
+        const pool = [...allKoreans].sort(() => Math.random() - 0.5);
+        const wordsWithOptions = words.map((word, wordIdx) => {
+          const wrong = [];
+          const n = pool.length;
+          const offset = (wordIdx * 3) % n;
+          for (let j = 0; j < n && wrong.length < 3; j++) {
+            const candidate = pool[(offset + j) % n];
+            if (candidate !== word.korean) wrong.push(candidate);
+          }
           const options = [...wrong, word.korean].sort(() => Math.random() - 0.5);
           return { id: word.id, english: word.english, options };
         });

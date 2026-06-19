@@ -64,8 +64,9 @@ async function addWord(req, res, next) {
     });
     const order = (maxOrder._max.order ?? -1) + 1;
 
+    const { pronunciation } = req.body;
     const word = await prisma.word.create({
-      data: { english, korean, example: example || null, wordBookId: req.params.id, order },
+      data: { english, korean, example: example || null, pronunciation: pronunciation || null, wordBookId: req.params.id, order },
     });
     res.status(201).json(word);
   } catch (err) {
@@ -111,6 +112,7 @@ async function importCSV(req, res, next) {
         english,
         korean,
         example: (row.example || '').trim() || null,
+        pronunciation: (row.pronunciation || '').trim() || null,
         wordBookId,
         order: order++,
       });
@@ -145,6 +147,7 @@ async function bulkAddWords(req, res, next) {
         english: w.english.trim(),
         korean: w.korean.trim(),
         example: w.example?.trim() || null,
+        pronunciation: w.pronunciation?.trim() || null,
         wordBookId: req.params.id,
         order: order++,
       }));

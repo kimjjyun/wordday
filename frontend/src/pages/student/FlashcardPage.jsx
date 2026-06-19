@@ -9,25 +9,28 @@ export default function FlashcardPage() {
   const [flipped, setFlipped] = useState(false);
   const [loading, setLoading] = useState(true);
   const [done,    setDone]    = useState(false);
-  const [wrongWords, setWrongWords] = useState([]);
-  const [rated,   setRated]   = useState(null);
 
   useEffect(() => {
     getTodayWords().then(r => setWords(r.data)).finally(() => setLoading(false));
   }, []);
 
   const current  = words[index];
-  const progress = words.length > 0 ? (index / words.length) * 100 : 0;
+  const progress = words.length > 0 ? ((index + 1) / words.length) * 100 : 0;
 
-  const handleRate = async (r) => {
-    if (rated) return;
-    setRated(r);
-    if (r === 1) setWrongWords(w => [...w, current]);
-    await submitReview({ wordId: current.id, rating: r });
-    setTimeout(() => {
-      if (index + 1 >= words.length) { setDone(true); }
-      else { setIndex(i => i + 1); setFlipped(false); setRated(null); }
-    }, 280);
+  const handlePrev = () => {
+    if (index === 0) return;
+    setIndex(i => i - 1);
+    setFlipped(false);
+  };
+
+  const handleNext = () => {
+    if (current) submitReview({ wordId: current.id, rating: 2 }).catch(() => {});
+    if (index + 1 >= words.length) {
+      setDone(true);
+    } else {
+      setIndex(i => i + 1);
+      setFlipped(false);
+    }
   };
 
   // ── 로딩 ─────────────────────────────────────────
@@ -61,37 +64,14 @@ export default function FlashcardPage() {
     <div className="min-h-screen flex flex-col bg-white max-w-lg mx-auto px-6">
       <div className="flex-1 flex flex-col justify-center pt-16">
         <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-gray-300 mb-6">Complete</p>
-        <h1 className="text-5xl font-black tracking-tighter leading-none mb-3">
-          {wrongWords.length === 0 ? '완벽해요.' : '학습 완료.'}
-        </h1>
-        <p className="text-sm text-gray-400 font-medium">
-          {words.length}개 중 <span className="text-black font-bold">{words.length - wrongWords.length}개</span> 맞았어요
-        </p>
-
-        {wrongWords.length > 0 && (
-          <div className="mt-8">
-            <div className="h-px bg-gray-100 mb-4" />
-            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-gray-300 mb-3">다시 볼 단어</p>
-            <div className="space-y-0">
-              {wrongWords.map((w, i) => (
-                <div key={w.id}>
-                  <div className="flex justify-between items-baseline py-3">
-                    <span className="font-bold text-[15px] text-black">{w.english}</span>
-                    <span className="text-[13px] text-gray-400">{w.korean}</span>
-                  </div>
-                  {i < wrongWords.length - 1 && <div className="h-px bg-gray-50" />}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+        <h1 className="text-5xl font-black tracking-tighter leading-none mb-3">학습 완료.</h1>
+        <p className="text-sm text-gray-400 font-medium">{words.length}개 단어 학습 완료</p>
       </div>
-
       <div className="pb-10 space-y-2.5">
         <button
-          onClick={() => { setIndex(0); setFlipped(false); setRated(null); setDone(false); setWrongWords([]); }}
+          onClick={() => { setIndex(0); setFlipped(false); setDone(false); }}
           className="w-full bg-black text-white font-bold py-4 rounded-full text-[15px] tracking-tight active:scale-[0.97] transition"
-        >다시 하기</button>
+        >다시 보기</button>
         <button
           onClick={() => navigate('/student')}
           className="w-full bg-white text-black border-2 border-black font-bold py-4 rounded-full text-[15px] tracking-tight active:scale-[0.97] transition"
@@ -128,7 +108,7 @@ export default function FlashcardPage() {
 
         {/* 플립 카드 */}
         <div className="flex-1 flex items-center">
-          <div className="flip-scene w-full" onClick={() => !rated && setFlipped(f => !f)}>
+          <div className="flip-scene w-full" onClick={() => setFlipped(f => !f)}>
             <div
               style={{
                 transformStyle: 'preserve-3d',
@@ -139,17 +119,23 @@ export default function FlashcardPage() {
                 cursor: 'pointer',
               }}
             >
-              {/* 앞면 — 영단어 */}
+              {/* 앞면 — 영단어 + 발음기호 */}
               <div
                 style={{ backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden', position: 'absolute', inset: 0 }}
                 className="border border-gray-100 rounded-[28px] flex flex-col items-center justify-center p-8 text-center bg-white"
               >
-                <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-gray-200 mb-8">
-                  {current.state === 'new' ? 'New Word' : 'Review'}
+                <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-gray-200 mb-6">
+                  {current.state === 'new' ? 'New Word' : 'Review'} · {index + 1}/{words.length}
                 </p>
                 <p className="text-5xl font-black tracking-tighter text-black leading-tight">
                   {current.english}
                 </p>
+                {current.pronunciation && (
+                  <p className="text-[14px] text-gray-300 font-medium mt-3 tracking-wide">
+                    {current.pronunciation}
+                  </p>
+                )}
+                <p className="text-[11px] text-gray-200 mt-6 font-medium">탭해서 뜻 보기</p>
               </div>
 
               {/* 뒷면 — 한국어 */}
@@ -161,9 +147,14 @@ export default function FlashcardPage() {
                 }}
                 className="bg-black rounded-[28px] flex flex-col items-center justify-center p-8 text-center"
               >
-                <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-white/30 mb-8">
+                <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-white/30 mb-4">
                   {current.english}
                 </p>
+                {current.pronunciation && (
+                  <p className="text-[13px] text-white/30 font-medium mb-4 tracking-wide">
+                    {current.pronunciation}
+                  </p>
+                )}
                 <p className="text-5xl font-black tracking-tighter text-white leading-tight">
                   {current.korean}
                 </p>
@@ -177,37 +168,23 @@ export default function FlashcardPage() {
           </div>
         </div>
 
-        {/* 평가 버튼 */}
-        <div className="mt-6 space-y-2.5">
-          {!flipped ? (
-            <button
-              onClick={() => setFlipped(true)}
-              className="w-full bg-black text-white font-bold py-4 rounded-full text-[15px] tracking-tight active:scale-[0.97] transition"
-            >
-              뜻 확인하기
-            </button>
-          ) : (
-            <div className="grid grid-cols-2 gap-2.5">
-              <button
-                onClick={() => handleRate(1)}
-                disabled={!!rated}
-                className={`py-4 rounded-full font-bold text-[15px] tracking-tight transition active:scale-[0.97] disabled:opacity-50 ${
-                  rated === 1 ? 'bg-black text-white' : 'bg-white text-black border-2 border-black'
-                }`}
-              >
-                몰랐어
-              </button>
-              <button
-                onClick={() => handleRate(3)}
-                disabled={!!rated}
-                className={`py-4 rounded-full font-bold text-[15px] tracking-tight transition active:scale-[0.97] disabled:opacity-50 ${
-                  rated === 3 ? 'bg-black text-white' : 'bg-white text-black border-2 border-black'
-                }`}
-              >
-                알았어
-              </button>
-            </div>
-          )}
+        {/* 이전 / 다음 버튼 */}
+        <div className="mt-6 grid grid-cols-2 gap-2.5">
+          <button
+            onClick={handlePrev}
+            disabled={index === 0}
+            className="py-4 rounded-full font-bold text-[15px] tracking-tight transition active:scale-[0.97]
+              bg-white text-black border-2 border-gray-200 hover:border-gray-400 disabled:opacity-30 disabled:cursor-not-allowed"
+          >
+            ← 이전
+          </button>
+          <button
+            onClick={handleNext}
+            className="py-4 rounded-full font-bold text-[15px] tracking-tight transition active:scale-[0.97]
+              bg-black text-white"
+          >
+            {index + 1 >= words.length ? '완료' : '다음 →'}
+          </button>
         </div>
       </div>
     </div>

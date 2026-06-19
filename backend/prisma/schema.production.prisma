@@ -57,14 +57,15 @@ model WordBook {
 }
 
 model Word {
-  id           String        @id @default(cuid())
-  english      String
-  korean       String
-  example      String?
-  wordBook     WordBook      @relation(fields: [wordBookId], references: [id], onDelete: Cascade)
-  wordBookId   String
-  order        Int
-  studyRecords StudyRecord[]
+  id            String        @id @default(cuid())
+  english       String
+  korean        String
+  example       String?
+  pronunciation String?
+  wordBook      WordBook      @relation(fields: [wordBookId], references: [id], onDelete: Cascade)
+  wordBookId    String
+  order         Int
+  studyRecords  StudyRecord[]
 }
 
 model StudyRecord {

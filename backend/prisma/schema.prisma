@@ -62,14 +62,15 @@ model WordBook {
 
 // ─── 단어 ───────────────────────────────────────────────
 model Word {
-  id           String        @id @default(cuid())
-  english      String
-  korean       String
-  example      String?
-  wordBook     WordBook      @relation(fields: [wordBookId], references: [id], onDelete: Cascade)
-  wordBookId   String
-  order        Int
-  studyRecords StudyRecord[]
+  id            String        @id @default(cuid())
+  english       String
+  korean        String
+  example       String?
+  pronunciation String?
+  wordBook      WordBook      @relation(fields: [wordBookId], references: [id], onDelete: Cascade)
+  wordBookId    String
+  order         Int
+  studyRecords  StudyRecord[]
 }
 
 // ─── 학습 기록 (SRS 핵심) ───────────────────────────────

@@ -29,5 +29,6 @@ export const TOTAL_DAYS = Math.ceil(ALL_WORDS.length / WORDS_PER_DAY);
 
 export const RECOMMENDED_WORDS = ALL_WORDS.map((word, index) => ({
   ...word,
+  no:  index + 1,
   day: Math.floor(index / WORDS_PER_DAY) + 1,
 }));

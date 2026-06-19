@@ -6,7 +6,7 @@ import Layout from '../../components/Layout';
 import { CATEGORIES, RECOMMENDED_WORDS, TOTAL_DAYS } from '../../data/recommendedWords';
 
 function downloadWordTemplate() {
-  const content = 'english,korean,example\nambiguous,모호한,The answer was ambiguous.\ndiligent,근면한,She is a diligent student.';
+  const content = 'english,korean,example,pronunciation\nambiguous,모호한,The answer was ambiguous.,/æmˈbɪɡjuəs/\ndiligent,근면한,She is a diligent student.,/ˈdɪlɪdʒənt/';
   const blob = new Blob(['﻿' + content], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -279,7 +279,7 @@ export default function WordBookPage() {
                       </div>
                       <div className="flex-1 min-w-0 flex justify-between items-baseline">
                         <div className="flex items-baseline gap-1.5">
-                          <span className="text-[9px] font-bold text-gray-300 tracking-wider shrink-0">D{w.day}</span>
+                          <span className="text-[9px] font-bold text-gray-300 tracking-wider shrink-0">#{w.no}·D{w.day}</span>
                           <span className="font-bold text-[14px] text-black">{w.english}</span>
                         </div>
                         <span className="text-[12px] text-gray-400 ml-3 shrink-0">{w.korean}</span>
@@ -338,8 +338,13 @@ export default function WordBookPage() {
                 <div key={w.id}>
                   <div className="flex items-center gap-3 py-3.5">
                     <span className="text-[11px] font-bold text-gray-200 w-5 text-right shrink-0">{i + 1}</span>
-                    <div className="flex-1 min-w-0 flex justify-between items-baseline">
-                      <span className="font-bold text-[15px] text-black tracking-tight">{w.english}</span>
+                    <div className="flex-1 min-w-0 flex justify-between items-start">
+                      <div>
+                        <span className="font-bold text-[15px] text-black tracking-tight">{w.english}</span>
+                        {w.pronunciation && (
+                          <p className="text-[11px] text-gray-300 font-medium mt-0.5">{w.pronunciation}</p>
+                        )}
+                      </div>
                       <span className="text-[13px] text-gray-400 font-medium ml-3 shrink-0">{w.korean}</span>
                     </div>
                     {confirmWordId === w.id ? (
