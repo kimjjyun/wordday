@@ -48,17 +48,38 @@ module.exports = function registerTestSocket(io) {
         });
 
         const words = test.wordBook.words;
-        const allKoreans = [...new Set(words.map(w => w.korean))];
+        const testKoreans = [...new Set(words.map(w => w.korean))];
 
-        // 풀을 한 번만 셔플 후 stride-3 오프셋으로 순환해 중복 선택지 최소화
-        const pool = [...allKoreans].sort(() => Math.random() - 0.5);
-        const wordsWithOptions = words.map((word, wordIdx) => {
+        // 학급 전체 단어장의 한국어 풀 수집 → 선택지 다양성 최대화
+        const classWords = await prisma.word.findMany({
+          where: { wordBook: { classId: test.classId } },
+          select: { korean: true },
+        });
+        const extPool = [...new Set(classWords.map(w => w.korean))];
+        // 풀이 충분하면 전체 학급 단어 사용, 아니면 현재 단어장만 사용
+        const basePool = extPool.length >= 6 ? extPool : testKoreans;
+
+        // 4벌 독립 셔플 후 연결 → 각 선택지가 최대한 고르게, 간격 넓게 등장
+        const distractorDeck = [];
+        for (let i = 0; i < 4; i++) {
+          distractorDeck.push(...[...basePool].sort(() => Math.random() - 0.5));
+        }
+
+        // 덱을 순차 소진하며 각 문제에 중복 없이 3개 오답 배정
+        let deckCursor = 0;
+        const wordsWithOptions = words.map(word => {
           const wrong = [];
-          const n = pool.length;
-          const offset = (wordIdx * 3) % n;
-          for (let j = 0; j < n && wrong.length < 3; j++) {
-            const candidate = pool[(offset + j) % n];
-            if (candidate !== word.korean) wrong.push(candidate);
+          while (wrong.length < 3 && deckCursor < distractorDeck.length) {
+            const candidate = distractorDeck[deckCursor++];
+            if (candidate !== word.korean && !wrong.includes(candidate)) {
+              wrong.push(candidate);
+            }
+          }
+          // 덱이 소진됐을 때 폴백
+          if (wrong.length < 3) {
+            for (const k of basePool) {
+              if (k !== word.korean && !wrong.includes(k) && wrong.length < 3) wrong.push(k);
+            }
           }
           const options = [...wrong, word.korean].sort(() => Math.random() - 0.5);
           return { id: word.id, english: word.english, options };
