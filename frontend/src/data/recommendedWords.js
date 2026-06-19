@@ -15,10 +15,19 @@ export const CATEGORIES = [
   { key: 'economy',  label: '경제/일상' },
 ];
 
-export const RECOMMENDED_WORDS = [
+const ALL_WORDS = [
   ...EMOTION_WORDS,
   ...SOCIETY_WORDS,
   ...NATURE_WORDS,
   ...ACADEMIC_WORDS,
   ...ECONOMY_WORDS,
 ];
+
+// 하루 20개씩 day 번호 부여 (뜯어먹는 1800단어 방식)
+export const WORDS_PER_DAY = 20;
+export const TOTAL_DAYS = Math.ceil(ALL_WORDS.length / WORDS_PER_DAY);
+
+export const RECOMMENDED_WORDS = ALL_WORDS.map((word, index) => ({
+  ...word,
+  day: Math.floor(index / WORDS_PER_DAY) + 1,
+}));

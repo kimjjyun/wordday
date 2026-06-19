@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { getWordBook, addWord, bulkAddWords, importCSV, deleteWord } from '../../api/wordbooks';
 import { createTest } from '../../api/tests';
 import Layout from '../../components/Layout';
-import { CATEGORIES, RECOMMENDED_WORDS } from '../../data/recommendedWords';
+import { CATEGORIES, RECOMMENDED_WORDS, TOTAL_DAYS } from '../../data/recommendedWords';
 
 function downloadWordTemplate() {
   const content = 'english,korean,example\nambiguous,모호한,The answer was ambiguous.\ndiligent,근면한,She is a diligent student.';
@@ -36,6 +36,7 @@ export default function WordBookPage() {
   const [directMsg,     setDirectMsg]     = useState('');
 
   const [catFilter, setCatFilter] = useState('all');
+  const [dayFilter, setDayFilter] = useState(0);
   const [search,    setSearch]    = useState('');
   const [selected,  setSelected]  = useState(new Set());
   const [suggestLoading, setSuggestLoading] = useState(false);
@@ -70,8 +71,9 @@ export default function WordBookPage() {
 
   const filteredWords = RECOMMENDED_WORDS.filter(w => {
     const matchCat = catFilter === 'all' || w.category === catFilter;
+    const matchDay = dayFilter === 0 || w.day === dayFilter;
     const q = search.trim().toLowerCase();
-    return matchCat && (!q || w.english.toLowerCase().includes(q) || w.korean.includes(q));
+    return matchCat && matchDay && (!q || w.english.toLowerCase().includes(q) || w.korean.includes(q));
   });
   const toggleWord = (eng) => setSelected(prev => { const n = new Set(prev); n.has(eng) ? n.delete(eng) : n.add(eng); return n; });
   const toggleAll  = () => {
@@ -209,6 +211,27 @@ export default function WordBookPage() {
                   >{c.label}</button>
                 ))}
               </div>
+              {/* Day 필터 */}
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-gray-300 shrink-0">DAY</span>
+                <div className="flex gap-1.5 overflow-x-auto pb-0.5 scrollbar-none">
+                  <button
+                    onClick={() => setDayFilter(0)}
+                    className={`shrink-0 px-2.5 py-1 rounded-full text-[11px] font-bold transition ${
+                      dayFilter === 0 ? 'bg-black text-white' : 'border border-gray-200 text-gray-400 hover:border-gray-400'
+                    }`}
+                  >전체</button>
+                  {[...Array(TOTAL_DAYS)].map((_, i) => (
+                    <button
+                      key={i + 1}
+                      onClick={() => setDayFilter(i + 1)}
+                      className={`shrink-0 px-2.5 py-1 rounded-full text-[11px] font-bold transition ${
+                        dayFilter === i + 1 ? 'bg-black text-white' : 'border border-gray-200 text-gray-400 hover:border-gray-400'
+                      }`}
+                    >{i + 1}</button>
+                  ))}
+                </div>
+              </div>
               {/* 검색 */}
               <input
                 className="w-full border border-gray-200 rounded-2xl px-4 py-2.5 text-[13px] font-medium outline-none focus:border-black transition placeholder:text-gray-300"
@@ -255,7 +278,10 @@ export default function WordBookPage() {
                         )}
                       </div>
                       <div className="flex-1 min-w-0 flex justify-between items-baseline">
-                        <span className="font-bold text-[14px] text-black">{w.english}</span>
+                        <div className="flex items-baseline gap-1.5">
+                          <span className="text-[9px] font-bold text-gray-300 tracking-wider shrink-0">D{w.day}</span>
+                          <span className="font-bold text-[14px] text-black">{w.english}</span>
+                        </div>
                         <span className="text-[12px] text-gray-400 ml-3 shrink-0">{w.korean}</span>
                       </div>
                     </label>

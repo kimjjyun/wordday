@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGuestStore } from '../../store/guestStore';
-import { CATEGORIES, RECOMMENDED_WORDS } from '../../data/recommendedWords';
+import { CATEGORIES, RECOMMENDED_WORDS, TOTAL_DAYS } from '../../data/recommendedWords';
 
 const DAYS_EN = ['SUNDAY','MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY','SATURDAY'];
 const MONTHS  = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -11,6 +11,7 @@ export default function SoloHome() {
   const navigate = useNavigate();
   const [showAll, setShowAll] = useState(false);
   const [catFilter, setCatFilter] = useState('all');
+  const [dayFilter, setDayFilter] = useState(0);
 
   const now   = new Date();
   const dayEn = DAYS_EN[now.getDay()];
@@ -21,10 +22,11 @@ export default function SoloHome() {
     return RECOMMENDED_WORDS
       .filter(w => {
         if (catFilter !== 'all' && w.category !== catFilter) return false;
+        if (dayFilter !== 0 && w.day !== dayFilter) return false;
         const rec = records[w.english];
         return !rec || new Date(rec.nextReview) <= now;
       });
-  }, [records, catFilter]);
+  }, [records, catFilter, dayFilter]);
 
   const PREVIEW = 5;
   const visible  = showAll ? dueWords : dueWords.slice(0, PREVIEW);
@@ -61,7 +63,7 @@ export default function SoloHome() {
         <div className="h-px bg-gray-100 mb-5" />
 
         {/* 카테고리 필터 */}
-        <div className="flex flex-wrap gap-1.5 mb-4">
+        <div className="flex flex-wrap gap-1.5 mb-3">
           {[{ key: 'all', label: '전체' }, ...CATEGORIES].map(c => (
             <button
               key={c.key}
@@ -71,6 +73,28 @@ export default function SoloHome() {
               }`}
             >{c.label}</button>
           ))}
+        </div>
+
+        {/* Day 필터 */}
+        <div className="flex items-center gap-2 mb-4">
+          <span className="text-[10px] font-bold uppercase tracking-widest text-gray-300 shrink-0">DAY</span>
+          <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+            <button
+              onClick={() => setDayFilter(0)}
+              className={`shrink-0 px-2.5 py-1 rounded-full text-[11px] font-bold transition ${
+                dayFilter === 0 ? 'bg-black text-white' : 'border border-gray-200 text-gray-400 hover:border-gray-400'
+              }`}
+            >전체</button>
+            {[...Array(TOTAL_DAYS)].map((_, i) => (
+              <button
+                key={i + 1}
+                onClick={() => setDayFilter(i + 1)}
+                className={`shrink-0 px-2.5 py-1 rounded-full text-[11px] font-bold transition ${
+                  dayFilter === i + 1 ? 'bg-black text-white' : 'border border-gray-200 text-gray-400 hover:border-gray-400'
+                }`}
+              >{i + 1}</button>
+            ))}
+          </div>
         </div>
 
         {/* 단어 리스트 */}
@@ -89,7 +113,10 @@ export default function SoloHome() {
             {visible.map((w, i) => (
               <div key={w.english}>
                 <div className="flex items-baseline justify-between py-3.5">
-                  <span className="font-bold text-[15px] text-black tracking-tight">{w.english}</span>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-[10px] font-bold text-gray-300 tracking-wider shrink-0">DAY {w.day}</span>
+                    <span className="font-bold text-[15px] text-black tracking-tight">{w.english}</span>
+                  </div>
                   <span className="text-[13px] text-gray-400 font-medium ml-3">{w.korean}</span>
                 </div>
                 {i < visible.length - 1 && <div className="h-px bg-gray-50" />}
