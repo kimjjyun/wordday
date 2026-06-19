@@ -48,20 +48,28 @@ module.exports = function registerTestSocket(io) {
         });
 
         const words = test.wordBook.words;
-        io.to(test.roomCode).emit('test:started', {
-          words: words.map(w => ({ id: w.id, english: w.english })),
+        const allKoreans = [...new Set(words.map(w => w.korean))];
+
+        const wordsWithOptions = words.map(word => {
+          const wrong = allKoreans
+            .filter(k => k !== word.korean)
+            .sort(() => Math.random() - 0.5)
+            .slice(0, 3);
+          const options = [...wrong, word.korean].sort(() => Math.random() - 0.5);
+          return { id: word.id, english: word.english, options };
         });
 
-        // 5초 간격으로 단어를 교사 화면에 표시
+        io.to(test.roomCode).emit('test:started', { words: wordsWithOptions });
+
+        // 10초 간격으로 단어 표시
         words.forEach((word, i) => {
           setTimeout(() => {
             io.to(test.roomCode).emit('test:show_word', {
               index: i,
               english: word.english,
               total: words.length,
-              timeLeft: 5,
             });
-          }, i * 5000);
+          }, i * 10000);
         });
       } catch (err) {
         socket.emit('error', { message: '테스트 시작 실패' });
