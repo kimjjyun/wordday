@@ -3,6 +3,24 @@ import { useNavigate } from 'react-router-dom';
 import { io } from 'socket.io-client';
 import { useAuthStore } from '../../store/authStore';
 import { getTestSocket, setTestSocket, clearTestSocket } from '../../lib/testSocketStore';
+import { RECOMMENDED_WORDS } from '../../data/recommendedWords';
+
+// 1000개+ 풀에서 이미 사용한 선택지를 피해 3개 오답 선택
+const POOL = [...new Set(RECOMMENDED_WORDS.map(w => w.korean))];
+
+function pickDistractors(correctKorean, usedSet) {
+  // 아직 이번 세션에서 등장하지 않은 것 우선
+  const fresh = POOL.filter(k => k !== correctKorean && !usedSet.has(k));
+  const source = fresh.length >= 3 ? fresh : POOL.filter(k => k !== correctKorean);
+  const shuffled = [...source].sort(() => Math.random() - 0.5);
+  return shuffled.slice(0, 3);
+}
+
+function buildOptions(word, usedSet) {
+  const wrong = pickDistractors(word.answer, usedSet);
+  wrong.forEach(k => usedSet.add(k));
+  return [...wrong, word.answer].sort(() => Math.random() - 0.5);
+}
 
 export default function TestActivePage() {
   const navigate = useNavigate();
@@ -22,7 +40,10 @@ export default function TestActivePage() {
 
   useEffect(() => {
     const stored = sessionStorage.getItem('test_words');
-    const parsed = stored ? JSON.parse(stored) : [];
+    const raw = stored ? JSON.parse(stored) : [];
+    // 1000개 풀에서 문제별 선택지 생성 (세션 내 중복 최소화)
+    const usedSet = new Set();
+    const parsed = raw.map(w => ({ ...w, options: buildOptions(w, usedSet) }));
     wordsRef.current = parsed;
     setWords(parsed);
 
