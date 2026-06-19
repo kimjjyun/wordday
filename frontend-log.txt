@@ -1,0 +1,34 @@
+
+  [32m[1mVITE[22m v5.4.21[39m  [2mready in [0m[1m2207[22m[2m[0m ms[22m
+
+  [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m5173[22m/[39m
+[2m  [32m➜[39m  [1mNetwork[22m[2m: use [22m[1m--host[22m[2m to expose[22m
+[2m[32m  ➜[39m[22m[2m  press [22m[1mh + enter[22m[2m to show help[22m
+[2m오후 4:27:54[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/LoginPage.jsx, /src/index.css[22m
+[2m오후 4:27:57[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/LoginPage.jsx, /src/index.css[22m
+[2m오후 4:28:03[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/LoginPage.jsx, /src/index.css[22m
+[2m오후 4:28:09[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.jsx, /src/index.css[22m
+[2m오후 4:28:13[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.jsx, /src/index.css[22m
+[2m오후 4:36:13[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/index.css, /src/pages/ResetPasswordPage.jsx, /src/pages/LoginPage.jsx[22m
+[2m오후 4:36:19[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/index.css, /src/pages/teacher/ClassDetailPage.jsx, /src/pages/teacher/TeacherDashboard.jsx[22m
+[2m오후 4:36:23[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/index.css, /src/pages/teacher/ClassDetailPage.jsx, /src/pages/teacher/WordBookPage.jsx[22m
+[2m오후 4:36:27[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/LoginPage.jsx, /src/index.css[22m
+[2m오후 4:36:37[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/LoginPage.jsx, /src/index.css[22m
+[2m오후 4:36:41[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/LoginPage.jsx, /src/index.css[22m
+[2m오후 4:36:55[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/student/StudentHome.jsx, /src/index.css[22m
+[2m오후 4:37:01[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/student/StudentHome.jsx, /src/index.css[22m
+[2m오후 4:37:14[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/student/StudentHome.jsx, /src/index.css[22m
+[2m오후 4:37:44[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/student/TestActivePage.jsx, /src/index.css[22m
+[2m오후 4:37:44[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/student/TestActivePage.jsx, /src/index.css[22m
+[2m오후 4:38:00[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/student/TestResultPage.jsx, /src/index.css[22m
+[2m오후 4:38:04[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/teacher/ClassDetailPage.jsx, /src/index.css[22m
+[2m오후 4:38:08[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/teacher/ClassDetailPage.jsx, /src/index.css[22m
+[2m오후 4:38:14[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/teacher/ClassDetailPage.jsx, /src/index.css[22m
+[2m오후 4:38:25[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/teacher/ClassDetailPage.jsx, /src/index.css[22m
+[2m오후 4:38:40[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/teacher/ClassDetailPage.jsx, /src/index.css[22m
+[2m오후 4:38:46[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/teacher/WordBookPage.jsx, /src/index.css[22m
+[2m오후 4:38:51[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/teacher/WordBookPage.jsx, /src/index.css[22m
+[2m오후 4:38:55[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/teacher/WordBookPage.jsx, /src/index.css[22m
+[2m오후 4:39:04[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/teacher/WordBookPage.jsx, /src/index.css[22m
+[2m오후 4:39:09[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.jsx, /src/index.css[22m
+[2m오후 4:39:14[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/App.jsx, /src/index.css[22m

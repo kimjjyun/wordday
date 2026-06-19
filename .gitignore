@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.env
+*.db
+*.db-journal
+backend/prisma/*.db
+backend/prisma/*.db-journal
+backend/.env
+frontend/.env
+verify.js
+verify-*.png
+*.log

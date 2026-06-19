@@ -1,0 +1,72 @@
+import { useNavigate } from 'react-router-dom';
+
+export default function TestResultPage() {
+  const navigate     = useNavigate();
+  const myScore      = JSON.parse(sessionStorage.getItem('my_score')    || '{}');
+  const classResult  = JSON.parse(sessionStorage.getItem('test_result') || '{}');
+  const detail       = myScore.detail ?? [];
+  const pct = myScore.total ? Math.round((myScore.score / myScore.total) * 100) : 0;
+
+  return (
+    <div className="min-h-screen flex flex-col bg-white max-w-lg mx-auto px-5">
+      <div className="flex-1 pt-16 pb-8">
+
+        {/* 내 점수 */}
+        <p className="text-[11px] font-bold uppercase tracking-[0.25em] text-gray-300 mb-4">My Result</p>
+        <h1 className="text-6xl font-black tracking-tighter leading-none mb-1">
+          {myScore.score ?? '-'}<span className="text-gray-200">/{myScore.total ?? '-'}</span>
+        </h1>
+        <p className="text-[13px] font-bold text-gray-300 mt-2">{pct}점</p>
+
+        {/* 단어별 O/X */}
+        {detail.length > 0 && (
+          <div className="mt-8">
+            <div className="h-px bg-gray-100 mb-5" />
+            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-gray-300 mb-3">단어별 결과</p>
+            <div className="space-y-0">
+              {detail.map((d, i) => (
+                <div key={i}>
+                  <div className="flex items-center gap-3 py-3">
+                    <span className={`text-[15px] font-black w-5 text-center shrink-0 ${d.correct ? 'text-black' : 'text-gray-200'}`}>
+                      {d.correct ? '○' : '×'}
+                    </span>
+                    <span className="font-bold text-[15px] text-black tracking-tight flex-1">{d.english}</span>
+                    <span className={`text-[13px] font-medium shrink-0 ${d.correct ? 'text-gray-400' : 'text-black font-bold'}`}>
+                      {d.korean}
+                    </span>
+                  </div>
+                  {i < detail.length - 1 && <div className="h-px bg-gray-50 ml-8" />}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* 반 전체 비교 */}
+        {classResult.avg !== undefined && (
+          <div className="mt-8">
+            <div className="h-px bg-gray-100 mb-5" />
+            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-gray-300 mb-4">반 전체</p>
+            <div className="flex gap-4">
+              <div className="flex-1 text-center border border-gray-100 rounded-2xl py-4">
+                <p className="text-2xl font-black text-black">{classResult.avg}</p>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-gray-300 mt-0.5">반 평균</p>
+              </div>
+              <div className="flex-1 text-center border border-gray-100 rounded-2xl py-4">
+                <p className="text-2xl font-black text-black">{classResult.topScore}</p>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-gray-300 mt-0.5">최고점</p>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="pb-10">
+        <button
+          onClick={() => navigate('/student')}
+          className="w-full bg-black text-white font-bold py-4 rounded-full text-[15px] tracking-tight active:scale-[0.97] transition"
+        >홈으로</button>
+      </div>
+    </div>
+  );
+}

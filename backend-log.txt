@@ -1,0 +1,2 @@
+◇ injected env (6) from .env // tip: ◈ encrypted .env [www.dotenvx.com]
+WordDay server running on port 3001

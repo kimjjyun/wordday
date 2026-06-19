@@ -1,0 +1,467 @@
+import { useEffect, useRef, useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { getWordBook, addWord, bulkAddWords, importCSV, deleteWord, duplicateWordBook } from '../../api/wordbooks';
+import { createTest, getWordBookTests } from '../../api/tests';
+import Layout from '../../components/Layout';
+import { CATEGORIES, RECOMMENDED_WORDS } from '../../data/recommendedWords';
+
+function downloadWordTemplate() {
+  const content = 'english,korean,example\nambiguous,모호한,The answer was ambiguous.\ndiligent,근면한,She is a diligent student.';
+  const blob = new Blob(['﻿' + content], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = '단어장_양식.csv'; a.click();
+  URL.revokeObjectURL(url);
+}
+
+const TABS = [
+  { key: 'direct',  label: '직접 입력' },
+  { key: 'suggest', label: '추천 단어' },
+  { key: 'csv',     label: 'CSV' },
+];
+
+const inputCls = 'w-full border border-gray-200 rounded-2xl px-4 py-3 text-[14px] font-medium outline-none focus:border-black transition placeholder:text-gray-300 placeholder:font-normal bg-white';
+
+function fmtDate(iso) {
+  const d = new Date(iso);
+  return `${d.getMonth() + 1}/${d.getDate()} ${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`;
+}
+
+export default function WordBookPage() {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const fileRef  = useRef(null);
+
+  const [wb,      setWb]      = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [tab,     setTab]     = useState('direct');
+
+  const [testDay,      setTestDay]      = useState(1);
+  const [testHistory,  setTestHistory]  = useState([]);
+  const [histLoading,  setHistLoading]  = useState(false);
+  const [dupLoading,   setDupLoading]   = useState(false);
+
+  const [rows, setRows] = useState([{ english: '', korean: '', example: '' }]);
+  const [directLoading, setDirectLoading] = useState(false);
+  const [directMsg,     setDirectMsg]     = useState('');
+
+  const [catFilter, setCatFilter] = useState('all');
+  const [search,    setSearch]    = useState('');
+  const [selected,  setSelected]  = useState(new Set());
+  const [suggestLoading, setSuggestLoading] = useState(false);
+  const [suggestMsg,     setSuggestMsg]     = useState('');
+
+  const [importLoading, setImportLoading] = useState(false);
+  const [importResult,  setImportResult]  = useState(null);
+  const [importError,   setImportError]   = useState('');
+
+  const [deletingId,    setDeletingId]    = useState(null);
+  const [confirmWordId, setConfirmWordId] = useState(null);
+  const [showAddWords,  setShowAddWords]  = useState(false);
+
+  const load = () => getWordBook(id).then(r => setWb(r.data)).finally(() => setLoading(false));
+
+  const loadHistory = () => {
+    setHistLoading(true);
+    getWordBookTests(id).then(r => setTestHistory(r.data)).catch(() => {}).finally(() => setHistLoading(false));
+  };
+
+  useEffect(() => { load(); loadHistory(); }, [id]);
+
+  const wordsPerDay  = wb?.wordsPerDay ?? 10;
+  const wordCount    = wb?.words?.length ?? 0;
+  const totalDays    = wordsPerDay > 0 ? Math.ceil(wordCount / wordsPerDay) : 0;
+
+  const dayStart = (testDay - 1) * wordsPerDay + 1;
+  const dayEnd   = Math.min(testDay * wordsPerDay, wordCount);
+
+  const updateRow = (i, f, v) => setRows(prev => prev.map((r, idx) => idx === i ? { ...r, [f]: v } : r));
+  const addRow    = () => setRows(prev => [...prev, { english: '', korean: '', example: '' }]);
+  const removeRow = (i) => setRows(prev => prev.length === 1 ? prev : prev.filter((_, idx) => idx !== i));
+
+  const handleDirectSubmit = async () => {
+    const valid = rows.filter(r => r.english.trim() && r.korean.trim());
+    if (!valid.length) { setDirectMsg('영단어와 뜻을 입력하세요.'); return; }
+    setDirectLoading(true); setDirectMsg('');
+    try {
+      await bulkAddWords(id, valid);
+      setRows([{ english: '', korean: '', example: '' }]);
+      setDirectMsg(`${valid.length}개 단어 추가 완료`); load();
+    } catch { setDirectMsg('오류가 발생했습니다.'); }
+    finally { setDirectLoading(false); }
+  };
+
+  const filteredWords = RECOMMENDED_WORDS.filter(w => {
+    const matchCat = catFilter === 'all' || w.category === catFilter;
+    const q = search.trim().toLowerCase();
+    return matchCat && (!q || w.english.toLowerCase().includes(q) || w.korean.includes(q));
+  });
+  const toggleWord = (eng) => setSelected(prev => { const n = new Set(prev); n.has(eng) ? n.delete(eng) : n.add(eng); return n; });
+  const toggleAll  = () => {
+    const allSel = filteredWords.every(w => selected.has(w.english));
+    setSelected(prev => { const n = new Set(prev); filteredWords.forEach(w => allSel ? n.delete(w.english) : n.add(w.english)); return n; });
+  };
+
+  const handleAddSelected = async () => {
+    const words = RECOMMENDED_WORDS.filter(w => selected.has(w.english));
+    if (!words.length) return;
+    setSuggestLoading(true); setSuggestMsg('');
+    try { await bulkAddWords(id, words); setSelected(new Set()); setSuggestMsg(`${words.length}개 추가 완료`); load(); }
+    catch { setSuggestMsg('오류가 발생했습니다.'); }
+    finally { setSuggestLoading(false); }
+  };
+
+  const handleCSV = async (e) => {
+    const file = e.target.files[0]; if (!file) return;
+    setImportError(''); setImportResult(null); setImportLoading(true);
+    try { const res = await importCSV(id, file); setImportResult(res.data); load(); }
+    catch (err) { setImportError(err.response?.data?.error ?? '업로드 오류'); }
+    finally { setImportLoading(false); if (fileRef.current) fileRef.current.value = ''; }
+  };
+
+  const handleDeleteWord = async (wordId) => {
+    setDeletingId(wordId);
+    setConfirmWordId(null);
+    try { await deleteWord(id, wordId); load(); }
+    catch { /* no-op */ }
+    finally { setDeletingId(null); }
+  };
+
+  const handleDuplicate = async () => {
+    setDupLoading(true);
+    try {
+      const res = await duplicateWordBook(id);
+      navigate(`/teacher/wordbooks/${res.data.id}`);
+    } catch { /* no-op */ }
+    finally { setDupLoading(false); }
+  };
+
+  const handleStartTest = async () => {
+    const dayNumber = totalDays > 1 ? testDay : 0;
+    const res = await createTest({ classId: wb.classId, wordBookId: id, dayNumber });
+    navigate(`/teacher/test/${res.data.id}/run`);
+  };
+
+  if (loading || !wb) return (
+    <Layout title="WORDDAY" back>
+      <div className="flex items-center justify-center py-20">
+        <div className="flex gap-1.5">
+          {[...Array(5)].map((_, i) => (
+            <div key={i} className="w-1.5 h-1.5 rounded-full bg-gray-200 animate-pulse" style={{ animationDelay: `${i * 0.15}s` }} />
+          ))}
+        </div>
+      </div>
+    </Layout>
+  );
+
+  const allFilteredSelected = filteredWords.length > 0 && filteredWords.every(w => selected.has(w.english));
+
+  return (
+    <Layout title="WORDDAY" back>
+      <div className="pb-8">
+
+        {/* 헤더 */}
+        <div className="pt-2 pb-5">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-gray-300 mb-1">
+                Word Book · {wb.week}주차
+              </p>
+              <h1 className="text-3xl font-black tracking-tighter leading-tight">{wb.title}</h1>
+              <p className="text-[12px] font-medium text-gray-300 mt-1">
+                단어 {wordCount}개 · {wordsPerDay}단어/일 · {totalDays > 0 ? `${totalDays}일치` : '—'}
+              </p>
+            </div>
+            <button
+              onClick={handleDuplicate}
+              disabled={dupLoading}
+              className="text-[11px] font-bold text-gray-400 border border-gray-200 rounded-full px-3 py-1.5 hover:border-gray-400 hover:text-black transition disabled:opacity-40 shrink-0 mt-1"
+            >{dupLoading ? '복사 중...' : '복제'}</button>
+          </div>
+        </div>
+
+        <div className="h-px bg-gray-100 mb-5" />
+
+        {/* ── 조회/종례 테스트 시작 ───────────────────── */}
+        <div className="mb-6">
+          <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-gray-300 mb-3">조회 · 종례 테스트</p>
+
+          {totalDays > 1 ? (
+            <>
+              {/* 일차 선택 */}
+              <div className="flex flex-wrap gap-2 mb-3">
+                {Array.from({ length: totalDays }, (_, i) => i + 1).map(day => {
+                  const s = (day - 1) * wordsPerDay + 1;
+                  const e = Math.min(day * wordsPerDay, wordCount);
+                  return (
+                    <button
+                      key={day}
+                      onClick={() => setTestDay(day)}
+                      className={`px-3 py-1.5 rounded-full text-[12px] font-bold transition ${
+                        testDay === day
+                          ? 'bg-black text-white'
+                          : 'border border-gray-200 text-gray-400 hover:border-gray-500'
+                      }`}
+                    >
+                      Day {day}
+                      <span className={`text-[10px] ml-1 ${testDay === day ? 'text-white/60' : 'text-gray-300'}`}>
+                        {s}–{e}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+              <button
+                onClick={handleStartTest}
+                disabled={!wordCount}
+                className="w-full bg-black text-white font-bold py-4 rounded-full text-[15px] tracking-tight active:scale-[0.97] transition disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                Day {testDay} 조회 시작 ({dayStart}–{dayEnd}번 단어)
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={handleStartTest}
+              disabled={!wordCount}
+              className="w-full bg-black text-white font-bold py-4 rounded-full text-[15px] tracking-tight active:scale-[0.97] transition disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              조회 테스트 시작 {wordCount > 0 ? `(전체 ${wordCount}개)` : ''}
+            </button>
+          )}
+        </div>
+
+        {/* ── 테스트 히스토리 ─────────────────────────── */}
+        {(testHistory.length > 0 || histLoading) && (
+          <>
+            <div className="h-px bg-gray-100 mb-5" />
+            <div className="mb-6">
+              <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-gray-300 mb-3">
+                Recent Tests · {testHistory.length}
+              </p>
+              {histLoading ? (
+                <div className="flex gap-1.5 py-4">
+                  {[...Array(3)].map((_, i) => <div key={i} className="w-1.5 h-1.5 rounded-full bg-gray-200 animate-pulse" />)}
+                </div>
+              ) : (
+                <div>
+                  {testHistory.map((t, i) => (
+                    <div key={t.id}>
+                      <button
+                        className="w-full flex items-center justify-between py-3.5 text-left active:bg-gray-50 rounded-xl transition"
+                        onClick={() => navigate(`/teacher/test/${t.id}/results`)}
+                      >
+                        <div>
+                          <p className="font-bold text-[14px] tracking-tight text-black">
+                            {t.dayNumber > 0 ? `Day ${t.dayNumber}` : '전체'}
+                            <span className="text-gray-300 font-medium ml-2 text-[12px]">{fmtDate(t.createdAt)}</span>
+                          </p>
+                          <p className="text-[11px] text-gray-300 font-medium mt-0.5">
+                            {t.studentCount}명 참여 · 평균 {t.avg}/{t.total}
+                          </p>
+                        </div>
+                        <span className="text-gray-200 text-lg">›</span>
+                      </button>
+                      {i < testHistory.length - 1 && <div className="h-px bg-gray-50" />}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </>
+        )}
+
+        <div className="h-px bg-gray-100 mb-5" />
+
+        {/* ── 단어 추가 ─────────────────────────────── */}
+        <div className="mb-6">
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-gray-300">Add Words</p>
+            <button
+              onClick={() => setShowAddWords(v => !v)}
+              className="text-[12px] font-bold text-black border border-gray-200 rounded-full px-3 py-1 hover:border-gray-400 transition"
+            >{showAddWords ? '닫기' : '+ 추가'}</button>
+          </div>
+
+          {showAddWords && <>
+          {/* 탭 */}
+          <div className="flex gap-0 border-b border-gray-100 mb-4">
+            {TABS.map(({ key, label }) => (
+              <button key={key} onClick={() => setTab(key)}
+                className={`flex-1 pb-2.5 text-[12px] font-bold transition relative ${tab === key ? 'text-black' : 'text-gray-300 hover:text-gray-500'}`}
+              >
+                {label}
+                {tab === key && <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-3 h-0.5 bg-black rounded-full" />}
+              </button>
+            ))}
+          </div>
+
+          {/* 직접 입력 */}
+          {tab === 'direct' && (
+            <div className="space-y-2">
+              <div className="grid grid-cols-12 gap-1 text-[10px] font-bold uppercase tracking-wider text-gray-300 px-1">
+                <span className="col-span-4">영단어 *</span>
+                <span className="col-span-4">한국어 뜻 *</span>
+                <span className="col-span-3">예문</span>
+              </div>
+              {rows.map((row, i) => (
+                <div key={i} className="grid grid-cols-12 gap-1 items-center">
+                  <input className="col-span-4 border border-gray-200 rounded-xl px-2.5 py-2 text-[13px] font-medium outline-none focus:border-black placeholder:text-gray-200" placeholder="ambiguous" value={row.english} onChange={e => updateRow(i, 'english', e.target.value)} />
+                  <input className="col-span-4 border border-gray-200 rounded-xl px-2.5 py-2 text-[13px] font-medium outline-none focus:border-black placeholder:text-gray-200" placeholder="모호한" value={row.korean} onChange={e => updateRow(i, 'korean', e.target.value)} />
+                  <input className="col-span-3 border border-gray-200 rounded-xl px-2.5 py-2 text-[13px] font-medium outline-none focus:border-black placeholder:text-gray-200" placeholder="예문..." value={row.example} onChange={e => updateRow(i, 'example', e.target.value)} />
+                  <button onClick={() => removeRow(i)} className="col-span-1 text-gray-300 hover:text-black text-xl font-bold text-center transition">×</button>
+                </div>
+              ))}
+              <button onClick={addRow} className="w-full border border-dashed border-gray-200 rounded-xl py-2 text-[12px] font-medium text-gray-300 hover:border-gray-400 hover:text-gray-500 transition">
+                + 행 추가
+              </button>
+              {directMsg && <p className={`text-[12px] font-medium text-center ${directMsg.includes('오류') ? 'text-black' : 'text-gray-400'}`}>{directMsg}</p>}
+              <button onClick={handleDirectSubmit} disabled={directLoading} className="w-full bg-black text-white font-bold py-3 rounded-full text-[14px] tracking-tight active:scale-[0.97] transition disabled:opacity-40 mt-1">
+                {directLoading ? '추가 중...' : '단어 추가'}
+              </button>
+            </div>
+          )}
+
+          {/* 추천 단어 */}
+          {tab === 'suggest' && (
+            <div className="space-y-3">
+              <div className="flex flex-wrap gap-1.5">
+                {[{ key: 'all', label: '전체' }, ...CATEGORIES].map(c => (
+                  <button key={c.key} onClick={() => setCatFilter(c.key)}
+                    className={`px-3 py-1.5 rounded-full text-[11px] font-bold transition ${
+                      catFilter === c.key ? 'bg-black text-white' : 'border border-gray-200 text-gray-400 hover:border-gray-400'
+                    }`}
+                  >{c.label}</button>
+                ))}
+              </div>
+              <input
+                className="w-full border border-gray-200 rounded-2xl px-4 py-2.5 text-[13px] font-medium outline-none focus:border-black transition placeholder:text-gray-300"
+                placeholder="검색..."
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+              />
+              <div className="flex justify-between items-center">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <div
+                    onClick={toggleAll}
+                    className={`w-4 h-4 rounded-full border-2 flex items-center justify-center cursor-pointer transition ${
+                      allFilteredSelected ? 'bg-[#FF6600] border-[#FF6600]' : 'border-gray-300'
+                    }`}
+                  >
+                    {allFilteredSelected && (
+                      <svg className="w-2 h-2 text-white" fill="none" viewBox="0 0 8 8">
+                        <path d="M1 4l2 2 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    )}
+                  </div>
+                  <span className="text-[12px] font-medium text-gray-400">전체 선택 ({filteredWords.length})</span>
+                </label>
+                {selected.size > 0 && <span className="text-[12px] font-bold text-black">{selected.size}개 선택</span>}
+              </div>
+              <div className="max-h-64 overflow-y-auto border border-gray-100 rounded-2xl">
+                {filteredWords.length === 0 ? (
+                  <p className="text-[13px] text-gray-300 font-medium text-center py-8">검색 결과 없음</p>
+                ) : filteredWords.map((w, i) => (
+                  <div key={w.english}>
+                    <label className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-gray-50 transition">
+                      <div
+                        onClick={() => toggleWord(w.english)}
+                        className={`w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition ${
+                          selected.has(w.english) ? 'bg-[#FF6600] border-[#FF6600]' : 'border-gray-200'
+                        }`}
+                      >
+                        {selected.has(w.english) && (
+                          <svg className="w-2 h-2 text-white" fill="none" viewBox="0 0 8 8">
+                            <path d="M1 4l2 2 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                          </svg>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0 flex justify-between items-baseline">
+                        <span className="font-bold text-[14px] text-black">{w.english}</span>
+                        <span className="text-[12px] text-gray-400 ml-3 shrink-0">{w.korean}</span>
+                      </div>
+                    </label>
+                    {i < filteredWords.length - 1 && <div className="h-px bg-gray-50 mx-4" />}
+                  </div>
+                ))}
+              </div>
+              {suggestMsg && <p className={`text-[12px] font-medium text-center ${suggestMsg.includes('오류') ? 'text-black' : 'text-gray-400'}`}>{suggestMsg}</p>}
+              <button onClick={handleAddSelected} disabled={selected.size === 0 || suggestLoading}
+                className="w-full bg-black text-white font-bold py-3 rounded-full text-[14px] tracking-tight active:scale-[0.97] transition disabled:opacity-40">
+                {suggestLoading ? '추가 중...' : `선택한 ${selected.size}개 추가`}
+              </button>
+            </div>
+          )}
+
+          {/* CSV */}
+          {tab === 'csv' && (
+            <div className="space-y-3">
+              <div className="flex justify-between items-center">
+                <p className="text-[11px] font-medium text-gray-400">english, korean, example 순서</p>
+                <button onClick={downloadWordTemplate} className="text-[11px] font-bold text-black border border-gray-200 rounded-full px-2.5 py-1 hover:border-black transition">
+                  양식 다운로드
+                </button>
+              </div>
+              <label className="flex flex-col items-center justify-center border border-dashed border-gray-200 rounded-2xl py-6 cursor-pointer hover:border-gray-400 transition">
+                {importLoading ? <p className="text-[13px] font-medium text-gray-400">업로드 중...</p> : (
+                  <>
+                    <p className="text-[13px] font-medium text-gray-400">CSV 파일 선택</p>
+                    <p className="text-[11px] text-gray-300 mt-1">.csv 파일만 지원</p>
+                  </>
+                )}
+                <input ref={fileRef} type="file" accept=".csv" className="hidden" onChange={handleCSV} />
+              </label>
+              {importError && <p className="text-[12px] font-medium text-black text-center">{importError}</p>}
+              {importResult && <p className="text-[12px] font-medium text-gray-400 text-center">{importResult.imported}개 업로드 완료{importResult.errors.length > 0 ? ` · 오류 ${importResult.errors.length}건` : ''}</p>}
+            </div>
+          )}
+          </>}
+        </div>
+
+        <div className="h-px bg-gray-100 mb-5" />
+
+        {/* ── 단어 목록 ─────────────────────────────── */}
+        <div>
+          <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-gray-300 mb-3">
+            Word List · {wordCount}
+          </p>
+
+          {wordCount === 0 ? (
+            <p className="text-[13px] text-gray-300 font-medium py-4">단어를 추가하세요</p>
+          ) : (
+            <div>
+              {wb.words.map((w, i) => {
+                const dayIdx  = Math.floor(i / wordsPerDay) + 1;
+                const isFirst = i % wordsPerDay === 0;
+                return (
+                  <div key={w.id}>
+                    {isFirst && totalDays > 1 && (
+                      <p className="text-[10px] font-black uppercase tracking-widest text-gray-200 pt-3 pb-1 ml-8">
+                        Day {dayIdx}
+                      </p>
+                    )}
+                    <div className="flex items-center gap-3 py-3">
+                      <span className="text-[11px] font-bold text-gray-200 w-5 text-right shrink-0">{i + 1}</span>
+                      <div className="flex-1 min-w-0 flex justify-between items-baseline">
+                        <span className="font-bold text-[15px] text-black tracking-tight">{w.english}</span>
+                        <span className="text-[13px] text-gray-400 font-medium ml-3 shrink-0">{w.korean}</span>
+                      </div>
+                      {confirmWordId === w.id ? (
+                        <div className="flex items-center gap-2 shrink-0">
+                          <button onClick={() => handleDeleteWord(w.id)} disabled={deletingId === w.id} className="text-[11px] font-bold text-black transition disabled:opacity-40">확인</button>
+                          <button onClick={() => setConfirmWordId(null)} className="text-[11px] font-bold text-gray-300 hover:text-black transition">취소</button>
+                        </div>
+                      ) : (
+                        <button onClick={() => setConfirmWordId(w.id)} disabled={deletingId === w.id} className="text-[11px] font-bold text-gray-300 hover:text-black transition disabled:opacity-40 px-1 shrink-0">×</button>
+                      )}
+                    </div>
+                    {i < wordCount - 1 && <div className="h-px bg-gray-50 ml-8" />}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+    </Layout>
+  );
+}
