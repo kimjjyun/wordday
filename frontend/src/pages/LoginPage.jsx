@@ -1,8 +1,7 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { teacherLogin, teacherRegister, studentLogin, forgotPassword } from '../api/auth';
-import { useGuestStore } from '../store/guestStore';
 
 const TABS = [
   { key: 'student',  label: '학생' },
@@ -12,14 +11,13 @@ const TABS = [
 
 export default function LoginPage() {
   const [tab,  setTab]  = useState('student');
-  const [form, setForm] = useState({ email: '', password: '', name: '', studentCode: '' });
+  const [form, setForm] = useState({ email: '', password: '', name: '', studentCode: '', classCode: '' });
   const [error,   setError]   = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
   const [showForgot, setShowForgot] = useState(false);
   const [forgotEmail, setForgotEmail] = useState('');
   const { login } = useAuthStore();
-  const { enter }  = useGuestStore();
   const navigate  = useNavigate();
   const set = k => e => setForm(f => ({ ...f, [k]: e.target.value }));
 
@@ -42,7 +40,7 @@ export default function LoginPage() {
     setError(''); setLoading(true);
     try {
       if (tab === 'student') {
-        const res = await studentLogin({ studentCode: form.studentCode, password: form.password });
+        const res = await studentLogin({ studentCode: form.studentCode, password: form.password, classCode: form.classCode });
         login(res.data.token, { ...res.data.student, role: 'student' });
         navigate('/student');
       } else if (tab === 'teacher') {
@@ -132,7 +130,10 @@ export default function LoginPage() {
           <input className={inputCls} type="email" placeholder="이메일" value={form.email} onChange={set('email')} required />
         )}
         {tab === 'student' && (
-          <input className={inputCls} placeholder="학번" value={form.studentCode} onChange={set('studentCode')} required />
+          <>
+            <input className={inputCls} placeholder="학급 코드 (예: TEST01)" value={form.classCode} onChange={set('classCode')} required />
+            <input className={inputCls} placeholder="학번" value={form.studentCode} onChange={set('studentCode')} required />
+          </>
         )}
         <input className={inputCls} type="password" placeholder="비밀번호" value={form.password} onChange={set('password')} required />
 
@@ -161,17 +162,12 @@ export default function LoginPage() {
       )}
 
       <div className="pb-10 pt-6 text-center space-y-3">
-        <div className="flex items-center gap-3">
-          <div className="flex-1 h-px bg-gray-100" />
-          <span className="text-[11px] font-bold text-gray-200 uppercase tracking-widest">또는</span>
-          <div className="flex-1 h-px bg-gray-100" />
-        </div>
-        <button
-          onClick={() => { enter(null); navigate('/solo'); }}
-          className="w-full border border-gray-200 text-gray-400 font-bold py-3.5 rounded-full text-[14px] tracking-tight hover:border-gray-400 hover:text-black transition"
+        <Link
+          to="/solo"
+          className="block text-[12px] text-gray-300 hover:text-black transition font-medium"
         >
-          로그인 없이 혼자 공부하기
-        </button>
+          로그인 없이 혼자 공부하기 →
+        </Link>
         <p className="text-[11px] text-gray-200">WordDay © 2026</p>
       </div>
     </div>

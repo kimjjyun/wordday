@@ -1,17 +1,22 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getTodayWords } from '../../api/study';
+import { getTodayWords, submitReview } from '../../api/study';
 
 function buildQuestions(words) {
   return words.map(word => {
-    const wrong = words
-      .filter(w => w.id !== word.id)
-      .sort(() => Math.random() - 0.5)
-      .slice(0, 3)
-      .map(w => w.korean);
+    const shuffled = words
+      .filter(w => w.id !== word.id && w.korean !== word.korean)
+      .sort(() => Math.random() - 0.5);
+    const seen = new Set();
+    const wrong = [];
+    for (const w of shuffled) {
+      if (!seen.has(w.korean)) { seen.add(w.korean); wrong.push(w.korean); }
+      if (wrong.length >= 3) break;
+    }
+    if (wrong.length < 3) return null;
     const options = [...wrong, word.korean].sort(() => Math.random() - 0.5);
     return { word, options, answer: word.korean };
-  }).sort(() => Math.random() - 0.5);
+  }).filter(Boolean).sort(() => Math.random() - 0.5);
 }
 
 export default function QuizPage() {
@@ -26,10 +31,7 @@ export default function QuizPage() {
 
   useEffect(() => {
     getTodayWords()
-      .then(r => {
-        if (r.data.length < 4) { setDone(true); return; }
-        setQuestions(buildQuestions(r.data));
-      })
+      .then(r => { setQuestions(buildQuestions(r.data)); })
       .finally(() => setLoading(false));
   }, []);
 
@@ -41,6 +43,7 @@ export default function QuizPage() {
     const correct = opt === q.answer;
     if (correct) setScore(s => s + 1);
     else setWrongList(w => [...w, q.word]);
+    submitReview({ wordId: q.word.id, rating: correct ? 4 : 1 }).catch(() => {});
     setTimeout(() => {
       if (index + 1 >= questions.length) setDone(true);
       else { setIndex(i => i + 1); setSelected(null); }
@@ -60,6 +63,14 @@ export default function QuizPage() {
           <div key={i} className="w-1.5 h-1.5 rounded-full bg-gray-200 animate-pulse" style={{ animationDelay: `${i * 0.15}s` }} />
         ))}
       </div>
+    </div>
+  );
+
+  if (!loading && questions.length < 4) return (
+    <div className="min-h-screen flex flex-col items-center justify-center bg-white max-w-lg mx-auto px-6 text-center">
+      <p className="text-2xl font-black tracking-tighter mb-2">단어가 부족해요</p>
+      <p className="text-[13px] text-gray-300 font-medium mb-8">퀴즈는 단어 4개 이상이 필요해요</p>
+      <button onClick={() => navigate('/student')} className="bg-black text-white font-bold py-4 px-10 rounded-full text-[15px] tracking-tight">돌아가기</button>
     </div>
   );
 
@@ -128,7 +139,7 @@ export default function QuizPage() {
           <div className="w-full bg-gray-100 rounded-full h-1 overflow-hidden">
             <div
               className="bg-black h-1 rounded-full transition-all duration-500"
-              style={{ width: `${(index / questions.length) * 100}%` }}
+              style={{ width: `${((index + 1) / questions.length) * 100}%` }}
             />
           </div>
         </div>
@@ -150,7 +161,7 @@ export default function QuizPage() {
 
         {/* 보기 */}
         <div className="grid grid-cols-2 gap-2.5">
-          {q.options.map(opt => {
+          {q.options.map((opt, i) => {
             let cls = 'border-2 border-gray-100 text-gray-700 bg-white';
             if (selected) {
               if (opt === q.answer)      cls = 'bg-black border-black text-white';
@@ -159,7 +170,7 @@ export default function QuizPage() {
             }
             return (
               <button
-                key={opt}
+                key={i}
                 onClick={() => handleSelect(opt)}
                 className={`rounded-2xl py-4 px-3 font-bold text-[14px] tracking-tight transition ${cls}`}
               >

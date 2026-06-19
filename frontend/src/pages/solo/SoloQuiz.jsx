@@ -5,14 +5,19 @@ import { useGuestStore } from '../../store/guestStore';
 
 function buildQuestions(words) {
   return words.map(word => {
-    const wrong = words
-      .filter(w => w.english !== word.english)
-      .sort(() => Math.random() - 0.5)
-      .slice(0, 3)
-      .map(w => w.korean);
+    const shuffled = words
+      .filter(w => w.english !== word.english && w.korean !== word.korean)
+      .sort(() => Math.random() - 0.5);
+    const seen = new Set();
+    const wrong = [];
+    for (const w of shuffled) {
+      if (!seen.has(w.korean)) { seen.add(w.korean); wrong.push(w.korean); }
+      if (wrong.length >= 3) break;
+    }
+    if (wrong.length < 3) return null;
     const options = [...wrong, word.korean].sort(() => Math.random() - 0.5);
     return { word, options, answer: word.korean };
-  }).sort(() => Math.random() - 0.5);
+  }).filter(Boolean).sort(() => Math.random() - 0.5);
 }
 
 export default function SoloQuiz() {
@@ -129,7 +134,7 @@ export default function SoloQuiz() {
         </div>
 
         <div className="grid grid-cols-2 gap-2.5">
-          {q.options.map(opt => {
+          {q.options.map((opt, i) => {
             let cls = 'border-2 border-gray-100 text-gray-700 bg-white';
             if (selected) {
               if (opt === q.answer)      cls = 'bg-black border-black text-white';
@@ -137,7 +142,7 @@ export default function SoloQuiz() {
               else                       cls = 'border-gray-100 text-gray-200 bg-white';
             }
             return (
-              <button key={opt} onClick={() => handleSelect(opt)}
+              <button key={i} onClick={() => handleSelect(opt)}
                 className={`rounded-2xl py-4 px-3 font-bold text-[14px] tracking-tight transition ${cls}`}
               >
                 {selected && opt === q.answer && <span className="mr-1">✓</span>}
