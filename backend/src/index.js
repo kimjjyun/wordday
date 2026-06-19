@@ -18,7 +18,7 @@ const server = http.createServer(app);
 
 // 허용 오리진 목록 (쉼표로 여러 개 가능, 끝의 / 는 무시)
 // FRONTEND_URL 미설정 시 기본으로 Netlify 도메인 허용
-const DEFAULT_ORIGINS = ['https://wordday123.netlify.app'];
+const DEFAULT_ORIGINS = ['https://wordday123.netlify.app', 'https://wordday999.netlify.app'];
 const envOrigins = (process.env.FRONTEND_URL || '')
   .split(',')
   .map(o => o.trim().replace(/\/$/, ''))
