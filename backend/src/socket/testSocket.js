@@ -61,7 +61,7 @@ module.exports = function registerTestSocket(io) {
 
         io.to(test.roomCode).emit('test:started', { words: wordsWithOptions });
 
-        // 10초 간격으로 단어 표시
+        // 3초 후 첫 단어 표시, 이후 10초 간격 (학생 페이지 로딩 여유)
         words.forEach((word, i) => {
           setTimeout(() => {
             io.to(test.roomCode).emit('test:show_word', {
@@ -69,7 +69,7 @@ module.exports = function registerTestSocket(io) {
               english: word.english,
               total: words.length,
             });
-          }, i * 10000);
+          }, 3000 + i * 10000);
         });
       } catch (err) {
         socket.emit('error', { message: '테스트 시작 실패' });

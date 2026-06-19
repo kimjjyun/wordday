@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { io } from 'socket.io-client';
 import { useAuthStore } from '../../store/authStore';
 import Layout from '../../components/Layout';
+import { setTestSocket, clearTestSocket } from '../../lib/testSocketStore';
 
 export default function TestWaitingPage() {
   const navigate = useNavigate();
@@ -14,7 +15,15 @@ export default function TestWaitingPage() {
   const [joined, setJoined] = useState(false);
   const [error,  setError]  = useState('');
 
-  useEffect(() => () => socketRef.current?.disconnect(), []);
+  // 방을 떠날 때만 disconnect (테스트 시작으로 넘어갈 땐 유지)
+  useEffect(() => {
+    return () => {
+      if (!testRef.current?.navigating) {
+        socketRef.current?.disconnect();
+        clearTestSocket();
+      }
+    };
+  }, []);
 
   const handleJoin = () => {
     const roomCode = code.trim().toUpperCase();
@@ -23,6 +32,7 @@ export default function TestWaitingPage() {
 
     const socket = io(import.meta.env.VITE_SOCKET_URL);
     socketRef.current = socket;
+    setTestSocket(socket);  // 모듈에 보관
 
     socket.emit('student:join', { roomCode, studentId: user.id });
 
@@ -33,13 +43,15 @@ export default function TestWaitingPage() {
 
     socket.on('test:started', ({ words }) => {
       sessionStorage.setItem('test_words', JSON.stringify(words));
-      sessionStorage.setItem('test_id', testRef.current?.testId);
+      sessionStorage.setItem('test_id',    testRef.current?.testId);
+      testRef.current = { ...testRef.current, navigating: true }; // disconnect 방지
       navigate('/student/test/active');
     });
 
     socket.on('error', ({ message }) => {
       setError(message);
       socket.disconnect();
+      clearTestSocket();
       socketRef.current = null;
     });
   };

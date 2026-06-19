@@ -1,23 +1,27 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { io } from 'socket.io-client';
 import { useAuthStore } from '../../store/authStore';
+import { getTestSocket, setTestSocket, clearTestSocket } from '../../lib/testSocketStore';
 
 export default function TestActivePage() {
   const navigate = useNavigate();
   const { user } = useAuthStore();
-  const [words, setWords]           = useState([]);
-  const [answers, setAnswers]       = useState({});
+  const [words, setWords]               = useState([]);
+  const [answers, setAnswers]           = useState({});
   const [currentIndex, setCurrentIndex] = useState(-1);
-  const [submitted, setSubmitted]   = useState(false);
-  const socketRef = useRef(null);
+  const [submitted, setSubmitted]       = useState(false);
 
   useEffect(() => {
     const stored = sessionStorage.getItem('test_words');
     if (stored) setWords(JSON.parse(stored));
 
-    const socket = io(import.meta.env.VITE_SOCKET_URL);
-    socketRef.current = socket;
+    // 대기 페이지에서 유지된 소켓 재사용, 없으면 새로 생성
+    let socket = getTestSocket();
+    if (!socket || socket.disconnected) {
+      socket = io(import.meta.env.VITE_SOCKET_URL);
+      setTestSocket(socket);
+    }
 
     socket.on('test:show_word', ({ index }) => setCurrentIndex(index));
 
@@ -31,7 +35,12 @@ export default function TestActivePage() {
       setSubmitted(true);
     });
 
-    return () => socket.disconnect();
+    return () => {
+      socket.off('test:show_word');
+      socket.off('test:finished');
+      socket.off('submit:confirmed');
+      clearTestSocket();
+    };
   }, []);
 
   const handleSelect = (wordId, option) => {
@@ -41,7 +50,7 @@ export default function TestActivePage() {
 
   const handleSubmit = () => {
     const testId = sessionStorage.getItem('test_id');
-    socketRef.current?.emit('student:submit', { testId, studentId: user.id, answers });
+    getTestSocket()?.emit('student:submit', { testId, studentId: user.id, answers });
   };
 
   const currentWord = words[currentIndex];
