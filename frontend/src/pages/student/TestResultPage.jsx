@@ -11,7 +11,7 @@ export default function TestResultPage() {
       <div className="flex-1 pt-16 pb-8">
         <p className="text-[11px] font-bold uppercase tracking-[0.25em] text-gray-300 mb-4">Result</p>
         <h1 className="text-6xl font-black tracking-tighter leading-none mb-1">
-          {myScore.score ?? '-'}<span className="text-gray-200">/{myScore.total ?? '-'}</span>
+          {myScore.score ?? 0}<span className="text-gray-200">/{myScore.total ?? '?'}</span>
         </h1>
         <p className="text-[13px] font-bold text-gray-300 mt-2">{pct}점</p>
 

@@ -28,13 +28,11 @@ function CopyableCode({ code }) {
 export default function TestRunPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [status, setStatus] = useState('waiting'); // waiting | active | finished
+  const [status, setStatus] = useState('waiting');
   const [roomCode, setRoomCode] = useState('');
   const [studentCount, setStudentCount] = useState(0);
   const [submittedCount, setSubmittedCount] = useState(0);
-  const [currentWord, setCurrentWord] = useState(null);
-  const [wordIndex, setWordIndex] = useState(-1);
-  const [totalWords, setTotalWords] = useState(0);
+  const [words, setWords] = useState([]);
   const socketRef = useRef(null);
 
   useEffect(() => {
@@ -45,11 +43,7 @@ export default function TestRunPage() {
     socket.on('room:created', ({ roomCode: rc }) => setRoomCode(rc));
     socket.on('room:student_joined', ({ count }) => setStudentCount(count));
     socket.on('room:submission_update', ({ submittedCount: sc }) => setSubmittedCount(sc));
-    socket.on('test:show_word', ({ index, english, total }) => {
-      setCurrentWord(english);
-      setWordIndex(index);
-      setTotalWords(total);
-    });
+    socket.on('test:started', ({ words: w }) => setWords(w));
     socket.on('test:finished', ({ avg, topScore }) => {
       sessionStorage.setItem('test_class_result', JSON.stringify({ avg, topScore }));
       setStatus('finished');
@@ -72,7 +66,7 @@ export default function TestRunPage() {
 
   return (
     <Layout title="조회 테스트 진행" back={status === 'waiting'}>
-      <div className="space-y-6">
+      <div className="space-y-5">
         {status === 'waiting' && (
           <>
             <div className="border border-gray-100 rounded-2xl p-6 text-center">
@@ -87,19 +81,36 @@ export default function TestRunPage() {
 
         {status === 'active' && (
           <>
-            <div className="bg-black rounded-[28px] p-8 text-center text-white min-h-48 flex flex-col justify-center">
-              <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-white/30 mb-4">{wordIndex + 1} / {totalWords}</p>
-              <p className="text-5xl font-black tracking-tighter">{currentWord ?? '준비 중...'}</p>
-            </div>
-
-            <div className="flex gap-4 text-center">
-              <div className="flex-1 bg-gray-50 rounded-xl py-3">
+            {/* 진행 현황 */}
+            <div className="flex gap-3">
+              <div className="flex-1 bg-gray-50 rounded-2xl py-4 text-center">
                 <p className="text-2xl font-black text-black">{studentCount}</p>
                 <p className="text-[10px] font-bold uppercase tracking-wider text-gray-300 mt-0.5">참여 학생</p>
               </div>
-              <div className="flex-1 bg-gray-50 rounded-xl py-3">
+              <div className="flex-1 bg-gray-50 rounded-2xl py-4 text-center">
                 <p className="text-2xl font-black text-black">{submittedCount}</p>
                 <p className="text-[10px] font-bold uppercase tracking-wider text-gray-300 mt-0.5">제출 완료</p>
+              </div>
+              <div className="flex-1 bg-black rounded-2xl py-4 text-center">
+                <p className="text-2xl font-black text-white">{words.length}</p>
+                <p className="text-[10px] font-bold uppercase tracking-wider text-white/40 mt-0.5">총 단어</p>
+              </div>
+            </div>
+
+            {/* 단어 전체 목록 */}
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-gray-300 mb-3">Words</p>
+              <div className="border border-gray-100 rounded-2xl overflow-hidden">
+                {words.map((w, i) => (
+                  <div key={w.id}>
+                    <div className="flex items-center gap-3 px-4 py-3">
+                      <span className="text-[11px] font-bold text-gray-200 w-5 text-right shrink-0">{i + 1}</span>
+                      <span className="font-bold text-[15px] text-black tracking-tight flex-1">{w.english}</span>
+                      <span className="text-[13px] text-gray-400 font-medium shrink-0">{w.answer}</span>
+                    </div>
+                    {i < words.length - 1 && <div className="h-px bg-gray-50 ml-12" />}
+                  </div>
+                ))}
               </div>
             </div>
 

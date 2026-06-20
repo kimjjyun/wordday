@@ -3,6 +3,25 @@ const { serializeAnswers } = require('../lib/db');
 
 const prisma = new PrismaClient();
 
+// 30일 이상 지난 테스트 자동 정리
+async function cleanupOldTests() {
+  try {
+    const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const old = await prisma.test.findMany({
+      where: { createdAt: { lt: cutoff } },
+      select: { id: true },
+    });
+    if (!old.length) return;
+    const ids = old.map(t => t.id);
+    await prisma.testResult.deleteMany({ where: { testId: { in: ids } } });
+    await prisma.test.deleteMany({ where: { id: { in: ids } } });
+    console.log(`[cleanup] 오래된 테스트 ${ids.length}개 삭제`);
+  } catch (e) {
+    console.error('[cleanup] 실패:', e.message);
+  }
+}
+cleanupOldTests();
+
 function generateRoomCode() {
   return Math.random().toString(36).substring(2, 6).toUpperCase();
 }
@@ -154,12 +173,20 @@ async function getResults(req, res, next) {
     res.json({
       avg: Math.round(avg * 10) / 10,
       topScore,
-      results: results.map(r => ({
-        studentName: r.student.name,
-        studentCode: r.student.studentCode,
-        score: r.score,
-        total: r.total,
-      })),
+      results: results.map(r => {
+        let answered = r.total;
+        try {
+          const parsed = typeof r.answers === 'string' ? JSON.parse(r.answers) : (r.answers || {});
+          if (parsed._answered !== undefined) answered = parsed._answered;
+        } catch {}
+        return {
+          studentName: r.student.name,
+          studentCode: r.student.studentCode,
+          score: r.score,
+          total: r.total,
+          answered,
+        };
+      }),
     });
   } catch (err) {
     next(err);

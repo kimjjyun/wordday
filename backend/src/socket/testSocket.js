@@ -54,17 +54,6 @@ module.exports = function registerTestSocket(io) {
         }));
 
         io.to(test.roomCode).emit('test:started', { words: wordsWithOptions });
-
-        // 3초 후 첫 단어 표시, 이후 10초 간격 (학생 페이지 로딩 여유)
-        words.forEach((word, i) => {
-          setTimeout(() => {
-            io.to(test.roomCode).emit('test:show_word', {
-              index: i,
-              english: word.english,
-              total: words.length,
-            });
-          }, 3000 + i * 10000);
-        });
       } catch (err) {
         socket.emit('error', { message: '테스트 시작 실패' });
       }
@@ -80,15 +69,18 @@ module.exports = function registerTestSocket(io) {
         if (!test) return socket.emit('error', { message: '테스트를 찾을 수 없습니다.' });
 
         let score = 0;
+        let answered = 0;
         test.wordBook.words.forEach(word => {
-          if ((answers[word.id] || '').trim() === word.korean.trim()) score++;
+          const submitted = (answers[word.id] || '').trim();
+          if (submitted) answered++;
+          if (submitted === word.korean.trim()) score++;
         });
         const total = test.wordBook.words.length;
 
         await prisma.testResult.upsert({
           where: { testId_studentId: { testId, studentId } },
-          create: { testId, studentId, answers: serializeAnswers(answers), score, total },
-          update: { answers: serializeAnswers(answers), score },
+          create: { testId, studentId, answers: JSON.stringify({ _answered: answered }), score, total },
+          update: { answers: JSON.stringify({ _answered: answered }), score },
         });
 
         socket.emit('submit:confirmed', { score, total });
