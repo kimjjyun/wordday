@@ -118,12 +118,11 @@ export default function SoloQuiz() {
         </span>
       </div>
 
-      <div className="flex-1 flex flex-col px-5 pb-8 pt-6">
-        <div className="flex-1 flex items-center mb-8">
-          <div className="w-full border border-gray-100 rounded-[28px] flex flex-col items-center justify-center p-8 text-center gap-6" style={{ minHeight: '200px' }}>
-            <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-gray-200">뜻을 고르세요</p>
-            <p className="text-5xl font-black tracking-tighter text-black leading-tight">{q.word.english}</p>
-          </div>
+      <div className="flex-1 flex flex-col px-5 pb-8 pt-4">
+        <div className="w-full border border-gray-100 rounded-[28px] flex flex-col items-center justify-center p-8 text-center gap-4 mb-4" style={{ minHeight: '180px' }}>
+          <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-gray-200">뜻을 고르세요</p>
+          <p className="text-5xl font-black tracking-tighter text-black leading-tight">{q.word.english}</p>
+          <p className="text-[10px] font-bold text-gray-200">No.{q.word.no} · DAY {q.word.day}</p>
         </div>
 
         <div className="grid grid-cols-2 gap-2.5">
