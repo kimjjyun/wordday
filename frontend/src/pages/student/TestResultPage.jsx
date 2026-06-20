@@ -14,6 +14,9 @@ export default function TestResultPage() {
           {myScore.score ?? 0}<span className="text-gray-200">/{myScore.total ?? '?'}</span>
         </h1>
         <p className="text-[13px] font-bold text-gray-300 mt-2">{pct}점</p>
+        {myScore.answered !== undefined && myScore.answered < (myScore.total ?? 0) && (
+          <p className="text-[12px] text-gray-400 font-medium mt-1">{myScore.answered}문제 풀음</p>
+        )}
 
         {classResult.avg !== undefined && (
           <div className="mt-10">

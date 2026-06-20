@@ -8,9 +8,11 @@ const {
   submitAnswers,
   getResults,
   getClassActiveTest,
+  getClassTestHistory,
 } = require('../controllers/testController');
 
 router.get('/class/active', authenticate, getClassActiveTest);
+router.get('/class/:classId/history', requireTeacher, getClassTestHistory);
 router.post('/with-words', requireTeacher, createTestWithWords);
 router.post('/', requireTeacher, createTest);
 router.patch('/:id/start', requireTeacher, startTest);

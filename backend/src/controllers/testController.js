@@ -193,6 +193,38 @@ async function getResults(req, res, next) {
   }
 }
 
+async function getClassTestHistory(req, res, next) {
+  try {
+    const { classId } = req.params;
+    const cls = await prisma.class.findFirst({ where: { id: classId, teacherId: req.user.sub } });
+    if (!cls) return res.status(404).json({ error: '학급을 찾을 수 없습니다.' });
+
+    const tests = await prisma.test.findMany({
+      where: { classId, status: 'finished' },
+      orderBy: { createdAt: 'desc' },
+      take: 10,
+      include: {
+        wordBook: { select: { title: true } },
+        results: { select: { score: true, total: true } },
+      },
+    });
+
+    res.json(tests.map(t => {
+      const scores = t.results.map(r => r.score);
+      const avg = scores.length ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length * 10) / 10 : 0;
+      const total = t.results[0]?.total ?? 0;
+      return {
+        id: t.id,
+        wordBookTitle: t.wordBook?.title ?? '알 수 없음',
+        createdAt: t.createdAt,
+        studentCount: t.results.length,
+        avg,
+        total,
+      };
+    }));
+  } catch (err) { next(err); }
+}
+
 async function getClassActiveTest(req, res, next) {
   try {
     const classId = req.user.classId;
@@ -206,4 +238,4 @@ async function getClassActiveTest(req, res, next) {
   } catch (err) { next(err); }
 }
 
-module.exports = { createTest, createTestWithWords, startTest, finishTest, submitAnswers, getResults, getClassActiveTest };
+module.exports = { createTest, createTestWithWords, startTest, finishTest, submitAnswers, getResults, getClassActiveTest, getClassTestHistory };

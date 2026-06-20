@@ -7,3 +7,4 @@ export const finishTest          = id      => client.patch(`/tests/${id}/finish`
 export const submitAnswers       = (id, data) => client.post(`/tests/${id}/submit`, data);
 export const getResults          = id  => client.get(`/tests/${id}/results`);
 export const getClassActiveTest  = ()  => client.get('/tests/class/active');
+export const getClassTestHistory = (classId) => client.get(`/tests/class/${classId}/history`);

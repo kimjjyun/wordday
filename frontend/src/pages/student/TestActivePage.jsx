@@ -56,16 +56,21 @@ export default function TestActivePage() {
 
     socket.on('test:finished', ({ avg, topScore, total }) => {
       sessionStorage.setItem('test_result', JSON.stringify({ avg, topScore, total }));
+      const ans = answersRef.current;
+      const allWords = wordsRef.current;
+      const answered = Object.keys(ans).length;
+      const score = allWords.filter(w => ans[w.id] === w.answer).length;
+      sessionStorage.setItem('my_score', JSON.stringify({ score, total: allWords.length, answered }));
       if (!submittedRef.current) {
         submittedRef.current = true;
         const testId = sessionStorage.getItem('test_id');
-        socket.emit('student:submit', { testId, studentId: user.id, answers: answersRef.current });
+        socket.emit('student:submit', { testId, studentId: user.id, answers: ans });
       }
       navigate('/student/test/result');
     });
 
     socket.on('submit:confirmed', ({ score: s, total }) => {
-      sessionStorage.setItem('my_score', JSON.stringify({ score: s, total }));
+      // my_score는 이미 navigate 전에 설정됨 — 여기서는 덮어쓰지 않음
       setSubmitted(true);
     });
 
@@ -79,11 +84,16 @@ export default function TestActivePage() {
   const doSubmit = () => {
     if (submittedRef.current) return;
     submittedRef.current = true;
+    const ans = answersRef.current;
+    const allWords = wordsRef.current;
+    const answered = Object.keys(ans).length;
+    const score = allWords.filter(w => ans[w.id] === w.answer).length;
+    sessionStorage.setItem('my_score', JSON.stringify({ score, total: allWords.length, answered }));
     const testId = sessionStorage.getItem('test_id');
     socketRef.current?.emit('student:submit', {
       testId,
       studentId: user.id,
-      answers: answersRef.current,
+      answers: ans,
     });
   };
 

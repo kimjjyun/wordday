@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getClass, bulkCreateStudents, deleteStudent } from '../../api/classes';
 import { createWordBook } from '../../api/wordbooks';
+import { getClassTestHistory } from '../../api/tests';
 import Layout from '../../components/Layout';
 
 function downloadStudentTemplate() {
@@ -34,9 +35,13 @@ export default function ClassDetailPage() {
   const [csvError,      setCsvError]      = useState('');
   const [deletingId,    setDeletingId]    = useState(null);
   const [confirmStudentId, setConfirmStudentId] = useState(null);
+  const [testHistory,   setTestHistory]   = useState([]);
 
   const load = () => getClass(id).then(r => setCls(r.data)).finally(() => setLoading(false));
   useEffect(() => { load(); }, [id]);
+  useEffect(() => {
+    getClassTestHistory(id).then(r => setTestHistory(r.data)).catch(() => {});
+  }, [id]);
 
   const handleAddWordBook = async () => {
     if (!wbForm.title || !wbForm.week) return;
@@ -283,6 +288,45 @@ export default function ClassDetailPage() {
             </div>
           )}
         </div>
+
+        {/* ── 최근 시험 기록 ─────────────────────────── */}
+        {testHistory.length > 0 && (
+          <>
+            <div className="h-px bg-gray-100 mt-6 mb-6" />
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-gray-300 mb-3">Recent Tests</p>
+              <div className="space-y-0">
+                {testHistory.map((t, i) => {
+                  const date = new Date(t.createdAt).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' });
+                  return (
+                    <div key={t.id}>
+                      <button
+                        className="w-full flex items-center justify-between py-3.5 text-left active:bg-gray-50 rounded-xl transition"
+                        onClick={() => navigate(`/teacher/test/${t.id}/results`)}
+                      >
+                        <div>
+                          <p className="font-bold text-[14px] tracking-tight text-black">{t.wordBookTitle}</p>
+                          <p className="text-[11px] font-medium text-gray-300 mt-0.5">
+                            {date} · {t.studentCount}명 참여
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <div className="text-right">
+                            <p className="font-black text-[15px] text-black">{t.avg}<span className="text-[11px] text-gray-300 font-medium">/{t.total}</span></p>
+                            <p className="text-[10px] text-gray-300 font-medium">평균</p>
+                          </div>
+                          <span className="text-gray-200 text-lg">›</span>
+                        </div>
+                      </button>
+                      {i < testHistory.length - 1 && <div className="h-px bg-gray-50" />}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </>
+        )}
+
       </div>
     </Layout>
   );

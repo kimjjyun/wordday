@@ -41,11 +41,6 @@ export default function TestResultsPage() {
     setTimeout(() => setCopied(''), 1800);
   };
 
-  const handleCopyUrl = () => {
-    copyToClipboard(window.location.href);
-    setCopied('url');
-    setTimeout(() => setCopied(''), 1800);
-  };
 
   if (loading) return (
     <Layout title="테스트 결과" back>
@@ -90,18 +85,12 @@ export default function TestResultsPage() {
             </div>
 
             {/* 공유 버튼 */}
-            <div className="flex gap-2 mb-6">
+            <div className="mb-6">
               <button
                 onClick={handleCopyText}
-                className="flex-1 border border-gray-200 rounded-full py-3 text-[13px] font-bold text-black hover:border-gray-400 transition active:scale-[0.97]"
+                className="w-full border border-gray-200 rounded-full py-3 text-[13px] font-bold text-black hover:border-gray-400 transition active:scale-[0.97]"
               >
                 {copied === 'text' ? '✓ 복사됨' : '결과 텍스트 복사'}
-              </button>
-              <button
-                onClick={handleCopyUrl}
-                className="flex-1 border border-gray-200 rounded-full py-3 text-[13px] font-bold text-black hover:border-gray-400 transition active:scale-[0.97]"
-              >
-                {copied === 'url' ? '✓ 복사됨' : '링크 복사'}
               </button>
             </div>
 
