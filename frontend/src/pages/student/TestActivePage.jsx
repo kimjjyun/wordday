@@ -173,13 +173,11 @@ export default function TestActivePage() {
                 let cls = 'border-gray-100 text-gray-700 bg-white active:bg-gray-50 disabled:opacity-60';
                 if (result) {
                   if (isCorrectOpt) {
-                    // 정답 버튼은 항상 초록
-                    cls = 'bg-emerald-500 border-emerald-500 text-white';
+                    cls = 'bg-black border-black text-white';
                   } else if (selected) {
-                    // 내가 고른 오답은 빨강
-                    cls = 'bg-red-400 border-red-400 text-white';
+                    cls = 'bg-gray-100 border-gray-100 text-gray-400 line-through';
                   } else {
-                    cls = 'border-gray-100 text-gray-300 bg-white';
+                    cls = 'border-gray-100 text-gray-200 bg-white';
                   }
                 }
 
@@ -198,17 +196,13 @@ export default function TestActivePage() {
 
             {/* 정오 피드백 메시지 */}
             {results[currentWord.id] && (
-              <div className={`text-center py-2.5 rounded-2xl mb-4 ${
-                results[currentWord.id] === 'correct'
-                  ? 'bg-emerald-50 text-emerald-600'
-                  : 'bg-red-50 text-red-500'
-              }`}>
-                <span className="font-black text-[15px]">
-                  {results[currentWord.id] === 'correct' ? '✓ 정답!' : '✗ 오답'}
+              <div className="text-center py-2.5 rounded-2xl mb-4 bg-gray-50">
+                <span className="font-black text-[15px] text-black">
+                  {results[currentWord.id] === 'correct' ? '✓ 정답' : '✗ 오답'}
                 </span>
                 {results[currentWord.id] === 'wrong' && (
-                  <span className="text-[13px] font-medium ml-2">
-                    정답: {currentWord.answer}
+                  <span className="text-[13px] font-bold text-black ml-2">
+                    → {currentWord.answer}
                   </span>
                 )}
               </div>
@@ -225,20 +219,18 @@ export default function TestActivePage() {
                     const r = results[w.id];
                     return (
                       <div key={w.id}
-                           className={`flex justify-between items-center px-4 py-2.5 rounded-xl ${
-                             r === 'correct' ? 'bg-emerald-50' : r === 'wrong' ? 'bg-red-50' : 'bg-gray-50'
-                           }`}>
+                           className="flex justify-between items-center px-4 py-2.5 rounded-xl bg-gray-50">
                         <span className="font-bold text-[13px] text-black">{w.english}</span>
                         <div className="flex items-center gap-2">
                           <span className={`text-[13px] font-medium ${
-                            r === 'correct' ? 'text-emerald-600' : r === 'wrong' ? 'text-red-400 line-through' : 'text-gray-300'
+                            r === 'correct' ? 'text-black' : 'text-gray-400 line-through'
                           }`}>
                             {answers[w.id] ?? '—'}
                           </span>
                           {r === 'wrong' && (
-                            <span className="text-[12px] font-bold text-emerald-600">{w.answer}</span>
+                            <span className="text-[12px] font-bold text-black">{w.answer}</span>
                           )}
-                          <span className="text-[13px]">{r === 'correct' ? '✓' : r === 'wrong' ? '✗' : ''}</span>
+                          <span className="text-[13px] font-bold">{r === 'correct' ? '✓' : r === 'wrong' ? '✗' : ''}</span>
                         </div>
                       </div>
                     );

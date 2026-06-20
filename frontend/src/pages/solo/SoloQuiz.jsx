@@ -1,21 +1,16 @@
 import { useState, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { RECOMMENDED_WORDS } from '../../data/recommendedWords';
-import { useGuestStore } from '../../store/guestStore';
+
+// 오답 풀은 전체 단어에서 뽑아 선택지 품질 유지
+const POOL_KOREAN = [...new Set(RECOMMENDED_WORDS.map(w => w.korean))];
 
 function buildQuestions(words) {
   return words.map(word => {
-    const shuffled = words
-      .filter(w => w.english !== word.english && w.korean !== word.korean)
-      .sort(() => Math.random() - 0.5);
-    const seen = new Set();
-    const wrong = [];
-    for (const w of shuffled) {
-      if (!seen.has(w.korean)) { seen.add(w.korean); wrong.push(w.korean); }
-      if (wrong.length >= 3) break;
-    }
-    if (wrong.length < 3) return null;
-    const options = [...wrong, word.korean].sort(() => Math.random() - 0.5);
+    const others = POOL_KOREAN.filter(k => k !== word.korean)
+      .sort(() => Math.random() - 0.5).slice(0, 3);
+    if (others.length < 3) return null;
+    const options = [...others, word.korean].sort(() => Math.random() - 0.5);
     return { word, options, answer: word.korean };
   }).filter(Boolean).sort(() => Math.random() - 0.5);
 }
@@ -23,17 +18,15 @@ function buildQuestions(words) {
 export default function SoloQuiz() {
   const navigate = useNavigate();
   const { state } = useLocation();
-  const { records } = useGuestStore();
 
   const baseWords = useMemo(() => {
     const cat = state?.category ?? 'all';
-    const now = new Date();
-    const pool = RECOMMENDED_WORDS.filter(w => {
+    const day = state?.day ?? 0;
+    return RECOMMENDED_WORDS.filter(w => {
       if (cat !== 'all' && w.category !== cat) return false;
-      const rec = records[w.english];
-      return !rec || new Date(rec.nextReview) <= now;
+      if (day !== 0 && w.day !== day) return false;
+      return true;
     });
-    return pool.length >= 4 ? pool : RECOMMENDED_WORDS.filter(w => cat === 'all' || w.category === cat);
   }, []);
 
   const [questions, setQuestions] = useState(() => buildQuestions(baseWords));
