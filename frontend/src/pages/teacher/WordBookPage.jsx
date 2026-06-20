@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getWordBook, addWord, bulkAddWords, importCSV, deleteWord } from '../../api/wordbooks';
-import { createTest } from '../../api/tests';
+import { createTest, createTestWithWords } from '../../api/tests';
 import Layout from '../../components/Layout';
 import { CATEGORIES, RECOMMENDED_WORDS, TOTAL_DAYS } from '../../data/recommendedWords';
 
@@ -49,6 +49,8 @@ export default function WordBookPage() {
   const [deletingId, setDeletingId] = useState(null);
   const [confirmWordId, setConfirmWordId] = useState(null);
   const [showAddWords, setShowAddWords] = useState(false);
+  const [showTestModal, setShowTestModal] = useState(false);
+  const [testDayFilter, setTestDayFilter] = useState(0);
 
   const load = () => getWordBook(id).then(r => setWb(r.data)).finally(() => setLoading(false));
   useEffect(() => { load(); }, [id]);
@@ -106,8 +108,15 @@ export default function WordBookPage() {
     finally { setDeletingId(null); }
   };
 
-  const handleStartTest = async () => {
-    const res = await createTest({ classId: wb.classId, wordBookId: id });
+  const handleStartTest = async (day) => {
+    let res;
+    if (day && day !== 0) {
+      const dayWords = RECOMMENDED_WORDS.filter(w => w.day === day);
+      res = await createTestWithWords({ classId: wb.classId, words: dayWords });
+    } else {
+      res = await createTest({ classId: wb.classId, wordBookId: id });
+    }
+    setShowTestModal(false);
     navigate(`/teacher/test/${res.data.id}/run`);
   };
 
@@ -126,6 +135,7 @@ export default function WordBookPage() {
   const allFilteredSelected = filteredWords.length > 0 && filteredWords.every(w => selected.has(w.english));
 
   return (
+    <>
     <Layout title="WORDDAY" back>
       <div className="pb-8">
 
@@ -142,7 +152,7 @@ export default function WordBookPage() {
 
         {/* 테스트 시작 */}
         <button
-          onClick={handleStartTest}
+          onClick={() => setShowTestModal(true)}
           disabled={!wb.words?.length}
           className="w-full bg-black text-white font-bold py-4 rounded-full text-[15px] tracking-tight active:scale-[0.97] transition mb-6 disabled:opacity-40 disabled:cursor-not-allowed"
         >
@@ -375,5 +385,48 @@ export default function WordBookPage() {
         </div>
       </div>
     </Layout>
+
+    {/* Day 선택 모달 */}
+
+    {showTestModal && (
+      <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40"
+        onClick={() => setShowTestModal(false)}>
+        <div className="bg-white w-full max-w-lg rounded-t-[28px] px-5 pt-5 pb-10"
+          onClick={e => e.stopPropagation()}>
+          <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-5" />
+          <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-gray-300 mb-4">조회 테스트 — 범위 선택</p>
+          <div className="space-y-2">
+            <button
+              onClick={() => handleStartTest(0)}
+              className="w-full text-left px-4 py-3.5 rounded-2xl bg-black text-white font-bold text-[14px] tracking-tight"
+            >
+              단어장 전체 ({wb.words?.length ?? 0}개)
+            </button>
+            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-gray-300 pt-2 pb-1">추천 단어 DAY별</p>
+            <div className="grid grid-cols-4 gap-2 max-h-60 overflow-y-auto">
+              {[...Array(TOTAL_DAYS)].map((_, i) => {
+                const d = i + 1;
+                const cnt = RECOMMENDED_WORDS.filter(w => w.day === d).length;
+                if (cnt === 0) return null;
+                return (
+                  <button key={d}
+                    onClick={() => handleStartTest(d)}
+                    className={`py-3 rounded-2xl border-2 font-bold text-[13px] transition text-center ${
+                      testDayFilter === d ? 'border-black bg-black text-white' : 'border-gray-100 hover:border-gray-400 text-black'
+                    }`}
+                    onMouseEnter={() => setTestDayFilter(d)}
+                    onMouseLeave={() => setTestDayFilter(0)}
+                  >
+                    <span className="block">DAY {d}</span>
+                    <span className="block text-[10px] font-medium opacity-60">{cnt}개</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 }

@@ -2,6 +2,7 @@ const router = require('express').Router();
 const { authenticate, requireTeacher } = require('../middleware/auth');
 const {
   createTest,
+  createTestWithWords,
   startTest,
   finishTest,
   submitAnswers,
@@ -10,6 +11,7 @@ const {
 } = require('../controllers/testController');
 
 router.get('/class/active', authenticate, getClassActiveTest);
+router.post('/with-words', requireTeacher, createTestWithWords);
 router.post('/', requireTeacher, createTest);
 router.patch('/:id/start', requireTeacher, startTest);
 router.patch('/:id/finish', requireTeacher, finishTest);

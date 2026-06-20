@@ -62,7 +62,7 @@ export default function StudentHome() {
         <div className="pt-2 pb-5">
           <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-gray-300 mb-1">{dateStr}</p>
           <h1 className="text-5xl font-black tracking-tighter text-black leading-none">{dayEn}</h1>
-          {stats && (
+          {stats && stats.totalWords > 0 && (
             <div className="flex items-center gap-1.5 mt-4">
               {[...Array(8)].map((_, i) => {
                 const total  = Math.max(stats.totalWords, 1);
@@ -77,7 +77,7 @@ export default function StudentHome() {
         </div>
 
         {/* 통계 */}
-        {stats && (
+        {stats && stats.totalWords > 0 && (
           <>
             <div className="h-px bg-gray-100" />
             <div className="flex py-4">

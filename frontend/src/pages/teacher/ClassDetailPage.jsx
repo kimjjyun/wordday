@@ -262,7 +262,7 @@ export default function ClassDetailPage() {
           )}
 
           {cls.wordBooks?.length === 0 ? (
-            <p className="text-[13px] text-gray-300 font-medium py-4">단어장이 없습니다</p>
+            <p className="text-[13px] text-gray-300 font-medium py-4">단어장을 추가해야 학생이 공부할 수 있어요</p>
           ) : (
             <div>
               {cls.wordBooks.map((wb, i) => (

@@ -7,6 +7,51 @@ function generateRoomCode() {
   return Math.random().toString(36).substring(2, 6).toUpperCase();
 }
 
+async function createTestWithWords(req, res, next) {
+  try {
+    const { classId, words } = req.body;
+    if (!classId || !Array.isArray(words) || words.length === 0) {
+      return res.status(400).json({ error: 'classId와 words는 필수입니다.' });
+    }
+
+    const cls = await prisma.class.findFirst({
+      where: { id: classId, teacherId: req.user.sub },
+    });
+    if (!cls) return res.status(404).json({ error: '학급을 찾을 수 없습니다.' });
+
+    let roomCode;
+    let exists = true;
+    while (exists) {
+      roomCode = generateRoomCode();
+      exists = await prisma.test.findUnique({ where: { roomCode } });
+    }
+
+    const wb = await prisma.wordBook.create({
+      data: {
+        classId,
+        title: `DAY 시험 (${new Date().toLocaleDateString('ko-KR')})`,
+        week: 0,
+        words: {
+          create: words.map((w, i) => ({
+            english: w.english,
+            korean: w.korean,
+            example: w.example || null,
+            order: i,
+          })),
+        },
+      },
+    });
+
+    const test = await prisma.test.create({
+      data: { classId, wordBookId: wb.id, roomCode },
+      select: { id: true, roomCode: true, status: true, createdAt: true },
+    });
+    res.status(201).json(test);
+  } catch (err) {
+    next(err);
+  }
+}
+
 async function createTest(req, res, next) {
   try {
     const { classId, wordBookId } = req.body;
@@ -134,4 +179,4 @@ async function getClassActiveTest(req, res, next) {
   } catch (err) { next(err); }
 }
 
-module.exports = { createTest, startTest, finishTest, submitAnswers, getResults, getClassActiveTest };
+module.exports = { createTest, createTestWithWords, startTest, finishTest, submitAnswers, getResults, getClassActiveTest };
