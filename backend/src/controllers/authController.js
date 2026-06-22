@@ -36,12 +36,12 @@ async function teacherRegister(req, res, next) {
   try {
     const { email, password, name, securityQuestion, securityAnswer } = req.body;
     if (!email || !password || !name || !securityQuestion || !securityAnswer) {
-      return res.status(400).json({ error: '이메일, 비밀번호, 이름, 보안 질문/답변은 필수입니다.' });
+      return res.status(400).json({ error: '아이디, 비밀번호, 이름, 보안 질문/답변은 필수입니다.' });
     }
 
     const existing = await prisma.teacher.findUnique({ where: { email } });
     if (existing) {
-      return res.status(409).json({ error: '이미 사용 중인 이메일입니다.' });
+      return res.status(409).json({ error: '이미 사용 중인 아이디입니다.' });
     }
 
     const hashed = await bcrypt.hash(password, 10);
@@ -62,12 +62,12 @@ async function teacherLogin(req, res, next) {
   try {
     const { email, password } = req.body;
     if (!email || !password) {
-      return res.status(400).json({ error: '이메일과 비밀번호를 입력하세요.' });
+      return res.status(400).json({ error: '아이디와 비밀번호를 입력하세요.' });
     }
 
     const teacher = await prisma.teacher.findUnique({ where: { email } });
     if (!teacher || !(await bcrypt.compare(password, teacher.password))) {
-      return res.status(401).json({ error: '이메일 또는 비밀번호가 올바르지 않습니다.' });
+      return res.status(401).json({ error: '아이디 또는 비밀번호가 올바르지 않습니다.' });
     }
 
     const token = signToken({ sub: teacher.id, role: 'teacher', name: teacher.name });
@@ -131,10 +131,10 @@ async function studentLogin(req, res, next) {
 async function forgotPassword(req, res, next) {
   try {
     const { email } = req.body;
-    if (!email) return res.status(400).json({ error: '이메일을 입력하세요.' });
+    if (!email) return res.status(400).json({ error: '아이디를 입력하세요.' });
 
     const teacher = await prisma.teacher.findUnique({ where: { email } });
-    if (!teacher) return res.status(404).json({ error: '가입되지 않은 이메일입니다.' });
+    if (!teacher) return res.status(404).json({ error: '가입되지 않은 아이디입니다.' });
 
     if (teacher.securityQuestion && teacher.securityAnswer) {
       return res.json({ securityQuestion: teacher.securityQuestion });

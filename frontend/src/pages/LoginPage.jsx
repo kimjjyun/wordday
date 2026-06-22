@@ -144,12 +144,13 @@ export default function LoginPage() {
         forgotStep === 'email' ? (
           <form onSubmit={handleForgotEmail} className="flex-1 space-y-3">
             <p className="text-[13px] text-gray-400 font-medium pb-1">
-              가입한 이메일을 입력하세요. 보안 질문 확인 후 비밀번호를 재설정합니다.
+              가입한 아이디를 입력하세요. 보안 질문 확인 후 비밀번호를 재설정합니다.
             </p>
             <input
               className={inputCls}
-              type="email"
-              placeholder="이메일"
+              type="text"
+              autoCapitalize="none"
+              placeholder="아이디"
               value={forgotEmail}
               onChange={e => setForgotEmail(e.target.value)}
               required
@@ -203,7 +204,7 @@ export default function LoginPage() {
           <input className={inputCls} placeholder="이름" value={form.name} onChange={set('name')} required />
         )}
         {(tab === 'teacher' || tab === 'register') && (
-          <input className={inputCls} type="email" placeholder="이메일" value={form.email} onChange={set('email')} required />
+          <input className={inputCls} type="text" autoCapitalize="none" placeholder="아이디" value={form.email} onChange={set('email')} required />
         )}
         {tab === 'student' && (
           <>
