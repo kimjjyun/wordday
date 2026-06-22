@@ -48,12 +48,13 @@ export default function ClassDetailPage() {
   const [actionLoading, setActionLoading] = useState(false);
 
   // 함께하기 모달
-  const DAY_SIZE   = 25;                                          // DAY당 단어 수
+  const DAY_SIZE   = 25;
   const TOTAL_DAYS = Math.ceil(RECOMMENDED_WORDS.length / DAY_SIZE); // 73
 
   const [showTogether,        setShowTogether]        = useState(false);
+  const [togetherStep,        setTogetherStep]        = useState(1); // 1=학생선택, 2=DAY선택
   const [togetherWbId,        setTogetherWbId]        = useState(null);
-  const [usesDaySelect,       setUsesDaySelect]       = useState(false);
+  const [usesDaySelect,       setUsesDaySelect]       = useState(true);
   const [dayRange,            setDayRange]            = useState({ start: 1, end: 1 });
   const [togetherStudentIds,  setTogetherStudentIds]  = useState(new Set());
   const [togetherLoading,     setTogetherLoading]     = useState(false);
@@ -61,9 +62,9 @@ export default function ClassDetailPage() {
 
   const openTogether = () => {
     if (!cls) return;
-    const hasBooks = (cls.wordBooks?.length ?? 0) > 0;
-    setUsesDaySelect(true);        // DAY별 선택이 기본
-    setTogetherWbId(hasBooks ? cls.wordBooks[0].id : null);
+    setTogetherStep(1);
+    setUsesDaySelect(true);
+    setTogetherWbId(cls.wordBooks?.[0]?.id ?? null);
     setDayRange({ start: 1, end: 1 });
     setTogetherStudentIds(new Set((cls.students ?? []).map(s => s.id)));
     setTogetherError('');
@@ -238,178 +239,199 @@ export default function ClassDetailPage() {
       {showTogether && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50"
           onClick={() => !togetherLoading && setShowTogether(false)}>
-          {/* flex-col 구조: 헤더 고정 / 내용 스크롤 / 버튼 고정 */}
           <div className="bg-white w-full max-w-lg rounded-t-[28px] animate-slide-up flex flex-col"
             style={{ maxHeight: '85vh' }}
             onClick={e => e.stopPropagation()}>
 
             {/* 고정 헤더 */}
             <div className="px-6 pt-6 flex-shrink-0">
-              <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-6" />
-              <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-gray-300 mb-1">Together</p>
-              <h2 className="text-2xl font-black tracking-tighter mb-5">함께하기 시작</h2>
+              <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-5" />
+              {/* 스텝 인디케이터 */}
+              <div className="flex items-center gap-2 mb-4">
+                <div className={`h-1 flex-1 rounded-full transition-all ${togetherStep >= 1 ? 'bg-black' : 'bg-gray-100'}`} />
+                <div className={`h-1 flex-1 rounded-full transition-all ${togetherStep >= 2 ? 'bg-black' : 'bg-gray-100'}`} />
+              </div>
+              {togetherStep === 1 ? (
+                <>
+                  <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-gray-300 mb-0.5">Step 1 / 2</p>
+                  <h2 className="text-2xl font-black tracking-tighter mb-4">학생 선택</h2>
+                </>
+              ) : (
+                <>
+                  <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-gray-300 mb-0.5">Step 2 / 2</p>
+                  <h2 className="text-2xl font-black tracking-tighter mb-4">단어 범위 선택</h2>
+                </>
+              )}
             </div>
 
-            {/* 스크롤 가능한 내용 영역 */}
+            {/* 스크롤 가능한 내용 */}
             <div className="flex-1 overflow-y-auto px-6">
 
-              {/* 단어장 / DAY 선택 */}
-              <div className="mb-5">
-                <p className="text-[11px] font-bold uppercase tracking-wider text-gray-300 mb-2">단어장 선택</p>
-                <div className="space-y-1.5">
-
-                  {/* DAY별 선택 옵션 (항상 표시) */}
-                  <button
-                    onClick={() => { setUsesDaySelect(true); setTogetherWbId(null); }}
-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl border-2 text-left transition ${
-                      usesDaySelect ? 'border-black bg-black/5' : 'border-gray-100 hover:border-gray-300'
-                    }`}
-                  >
-                    <div className={`w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition ${
-                      usesDaySelect ? 'border-black bg-black' : 'border-gray-300'
-                    }`}>
-                      {usesDaySelect && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+              {/* ── STEP 1: 학생 선택 ── */}
+              {togetherStep === 1 && (
+                <div className="mb-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-gray-300">
+                      선택 <span className="text-black">{togetherStudentIds.size}명</span>
+                    </p>
+                    <div className="flex gap-1.5">
+                      <button
+                        onClick={() => setTogetherStudentIds(new Set((cls.students ?? []).map(s => s.id)))}
+                        className="text-[11px] font-bold text-black border border-gray-200 rounded-full px-2.5 py-1 hover:border-gray-400 transition"
+                      >전체</button>
+                      <button
+                        onClick={() => setTogetherStudentIds(new Set())}
+                        className="text-[11px] font-bold text-gray-400 border border-gray-200 rounded-full px-2.5 py-1 hover:border-gray-400 transition"
+                      >해제</button>
                     </div>
-                    <div>
-                      <p className="font-bold text-[14px] text-black">기본 단어 DAY별 선택</p>
-                      <p className="text-[11px] text-gray-300 font-medium">1,825개 · DAY 범위 지정</p>
+                  </div>
+                  {cls.students?.length === 0 ? (
+                    <p className="text-[13px] text-gray-300 py-2">등록된 학생이 없습니다.</p>
+                  ) : (
+                    <div className="border border-gray-100 rounded-2xl overflow-hidden">
+                      {[...(cls.students)].sort((a, b) =>
+                        (parseInt(a.studentCode) || 0) - (parseInt(b.studentCode) || 0) || a.studentCode.localeCompare(b.studentCode)
+                      ).map((s, i, arr) => {
+                        const checked = togetherStudentIds.has(s.id);
+                        return (
+                          <div key={s.id}>
+                            <button
+                              onClick={() => setTogetherStudentIds(prev => {
+                                const next = new Set(prev);
+                                checked ? next.delete(s.id) : next.add(s.id);
+                                return next;
+                              })}
+                              className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-gray-50 transition"
+                            >
+                              <div className={`w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition ${
+                                checked ? 'bg-black border-black' : 'border-gray-200'
+                              }`}>
+                                {checked && (
+                                  <svg width="8" height="6" viewBox="0 0 8 6" fill="none">
+                                    <path d="M1 3L3 5L7 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                                  </svg>
+                                )}
+                              </div>
+                              <span className="font-bold text-[14px] text-black flex-1">{s.name}</span>
+                              <span className="text-[12px] text-gray-300 font-medium">{s.studentCode}</span>
+                            </button>
+                            {i < arr.length - 1 && <div className="h-px bg-gray-50" />}
+                          </div>
+                        );
+                      })}
                     </div>
-                  </button>
+                  )}
+                </div>
+              )}
 
-                  {/* 기존 단어장 목록 */}
-                  {cls.wordBooks?.map(wb => (
-                    <button key={wb.id}
-                      onClick={() => { setUsesDaySelect(false); setTogetherWbId(wb.id); }}
+              {/* ── STEP 2: DAY 선택 ── */}
+              {togetherStep === 2 && (
+                <div className="mb-4">
+                  {/* 단어장 선택 */}
+                  <div className="space-y-1.5 mb-4">
+                    <button
+                      onClick={() => { setUsesDaySelect(true); setTogetherWbId(null); }}
                       className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl border-2 text-left transition ${
-                        !usesDaySelect && togetherWbId === wb.id ? 'border-black bg-black/5' : 'border-gray-100 hover:border-gray-300'
+                        usesDaySelect ? 'border-black bg-black/5' : 'border-gray-100 hover:border-gray-300'
                       }`}
                     >
                       <div className={`w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition ${
-                        !usesDaySelect && togetherWbId === wb.id ? 'border-black bg-black' : 'border-gray-300'
+                        usesDaySelect ? 'border-black bg-black' : 'border-gray-300'
                       }`}>
-                        {!usesDaySelect && togetherWbId === wb.id && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                        {usesDaySelect && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
                       </div>
                       <div>
-                        <p className="font-bold text-[14px] text-black">{wb.title}</p>
-                        <p className="text-[11px] text-gray-300 font-medium">{wb.week}주차</p>
+                        <p className="font-bold text-[14px] text-black">기본 단어 DAY별 선택</p>
+                        <p className="text-[11px] text-gray-300 font-medium">1,825개 · 총 {TOTAL_DAYS}일</p>
                       </div>
                     </button>
-                  ))}
-                </div>
+                    {cls.wordBooks?.map(wb => (
+                      <button key={wb.id}
+                        onClick={() => { setUsesDaySelect(false); setTogetherWbId(wb.id); }}
+                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl border-2 text-left transition ${
+                          !usesDaySelect && togetherWbId === wb.id ? 'border-black bg-black/5' : 'border-gray-100 hover:border-gray-300'
+                        }`}
+                      >
+                        <div className={`w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition ${
+                          !usesDaySelect && togetherWbId === wb.id ? 'border-black bg-black' : 'border-gray-300'
+                        }`}>
+                          {!usesDaySelect && togetherWbId === wb.id && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                        </div>
+                        <div>
+                          <p className="font-bold text-[14px] text-black">{wb.title}</p>
+                          <p className="text-[11px] text-gray-300 font-medium">{wb.week}주차 · {wb.wordCount ?? '?'}개</p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
 
-                {/* DAY 범위 선택 UI */}
-                {usesDaySelect && (
-                  <div className="mt-3 bg-gray-50 rounded-2xl px-4 py-3">
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-3">DAY 범위</p>
-                    <div className="flex items-center gap-3">
-                      {/* 시작 DAY */}
-                      <div className="flex-1">
-                        <p className="text-[10px] text-gray-300 text-center mb-1.5">시작</p>
-                        <div className="flex items-center border border-gray-200 bg-white rounded-xl overflow-hidden">
-                          <button
-                            onClick={() => setDayRange(r => ({ ...r, start: Math.max(1, r.start - 1) }))}
-                            className="px-3 py-2.5 text-gray-400 hover:text-black font-bold text-lg transition"
-                          >−</button>
-                          <span className="flex-1 text-center font-black text-[13px]">DAY {dayRange.start}</span>
-                          <button
-                            onClick={() => setDayRange(r => ({ ...r, start: Math.min(r.end, r.start + 1) }))}
-                            className="px-3 py-2.5 text-gray-400 hover:text-black font-bold text-lg transition"
-                          >+</button>
+                  {/* DAY 범위 선택 */}
+                  {usesDaySelect && (
+                    <div className="bg-gray-50 rounded-2xl px-4 py-4">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-3">DAY 범위</p>
+                      <div className="flex items-center gap-3">
+                        <div className="flex-1">
+                          <p className="text-[10px] text-gray-300 text-center mb-1.5">시작</p>
+                          <div className="flex items-center border border-gray-200 bg-white rounded-xl overflow-hidden">
+                            <button onClick={() => setDayRange(r => ({ ...r, start: Math.max(1, r.start - 1) }))}
+                              className="px-3 py-2.5 text-gray-400 hover:text-black font-bold text-lg transition">−</button>
+                            <span className="flex-1 text-center font-black text-[13px]">DAY {dayRange.start}</span>
+                            <button onClick={() => setDayRange(r => ({ ...r, start: Math.min(r.end, r.start + 1) }))}
+                              className="px-3 py-2.5 text-gray-400 hover:text-black font-bold text-lg transition">+</button>
+                          </div>
+                        </div>
+                        <span className="text-gray-300 font-bold text-lg mt-5">~</span>
+                        <div className="flex-1">
+                          <p className="text-[10px] text-gray-300 text-center mb-1.5">끝</p>
+                          <div className="flex items-center border border-gray-200 bg-white rounded-xl overflow-hidden">
+                            <button onClick={() => setDayRange(r => ({ ...r, end: Math.max(r.start, r.end - 1) }))}
+                              className="px-3 py-2.5 text-gray-400 hover:text-black font-bold text-lg transition">−</button>
+                            <span className="flex-1 text-center font-black text-[13px]">DAY {dayRange.end}</span>
+                            <button onClick={() => setDayRange(r => ({ ...r, end: Math.min(TOTAL_DAYS, r.end + 1) }))}
+                              className="px-3 py-2.5 text-gray-400 hover:text-black font-bold text-lg transition">+</button>
+                          </div>
                         </div>
                       </div>
-                      <span className="text-gray-300 font-bold text-lg mt-5">~</span>
-                      {/* 끝 DAY */}
-                      <div className="flex-1">
-                        <p className="text-[10px] text-gray-300 text-center mb-1.5">끝</p>
-                        <div className="flex items-center border border-gray-200 bg-white rounded-xl overflow-hidden">
-                          <button
-                            onClick={() => setDayRange(r => ({ ...r, end: Math.max(r.start, r.end - 1) }))}
-                            className="px-3 py-2.5 text-gray-400 hover:text-black font-bold text-lg transition"
-                          >−</button>
-                          <span className="flex-1 text-center font-black text-[13px]">DAY {dayRange.end}</span>
-                          <button
-                            onClick={() => setDayRange(r => ({ ...r, end: Math.min(TOTAL_DAYS, r.end + 1) }))}
-                            className="px-3 py-2.5 text-gray-400 hover:text-black font-bold text-lg transition"
-                          >+</button>
-                        </div>
-                      </div>
+                      <p className="text-[11px] text-gray-400 text-center mt-2.5 font-medium">
+                        DAY {dayRange.start}{dayRange.end > dayRange.start ? `~${dayRange.end}` : ''} ·&nbsp;
+                        {Math.min((dayRange.end - dayRange.start + 1) * DAY_SIZE, RECOMMENDED_WORDS.length - (dayRange.start - 1) * DAY_SIZE)}개 단어
+                      </p>
                     </div>
-                    <p className="text-[11px] text-gray-400 text-center mt-2.5 font-medium">
-                      DAY {dayRange.start}{dayRange.end > dayRange.start ? `~${dayRange.end}` : ''} · {Math.min((dayRange.end - dayRange.start + 1) * DAY_SIZE, RECOMMENDED_WORDS.length - (dayRange.start - 1) * DAY_SIZE)}개 단어
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              {/* 학생 선택 */}
-              <div className="mb-4">
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-[11px] font-bold uppercase tracking-wider text-gray-300">
-                    학생 선택 <span className="text-black">{togetherStudentIds.size}명</span>
-                  </p>
-                  <div className="flex gap-1.5">
-                    <button
-                      onClick={() => setTogetherStudentIds(new Set((cls.students ?? []).map(s => s.id)))}
-                      className="text-[11px] font-bold text-black border border-gray-200 rounded-full px-2.5 py-1 hover:border-gray-400 transition"
-                    >전체</button>
-                    <button
-                      onClick={() => setTogetherStudentIds(new Set())}
-                      className="text-[11px] font-bold text-gray-400 border border-gray-200 rounded-full px-2.5 py-1 hover:border-gray-400 transition"
-                    >해제</button>
-                  </div>
+                  )}
                 </div>
-                {cls.students?.length === 0 ? (
-                  <p className="text-[13px] text-gray-300 py-2">등록된 학생이 없습니다.</p>
-                ) : (
-                  <div className="border border-gray-100 rounded-2xl overflow-hidden">
-                    {[...(cls.students)].sort((a, b) =>
-                      (parseInt(a.studentCode) || 0) - (parseInt(b.studentCode) || 0) || a.studentCode.localeCompare(b.studentCode)
-                    ).map((s, i, arr) => {
-                      const checked = togetherStudentIds.has(s.id);
-                      return (
-                        <div key={s.id}>
-                          <button
-                            onClick={() => setTogetherStudentIds(prev => {
-                              const next = new Set(prev);
-                              checked ? next.delete(s.id) : next.add(s.id);
-                              return next;
-                            })}
-                            className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-gray-50 transition"
-                          >
-                            <div className={`w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition ${
-                              checked ? 'bg-black border-black' : 'border-gray-200'
-                            }`}>
-                              {checked && (
-                                <svg width="8" height="6" viewBox="0 0 8 6" fill="none">
-                                  <path d="M1 3L3 5L7 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                                </svg>
-                              )}
-                            </div>
-                            <span className="font-bold text-[14px] text-black flex-1">{s.name}</span>
-                            <span className="text-[12px] text-gray-300 font-medium">{s.studentCode}</span>
-                          </button>
-                          {i < arr.length - 1 && <div className="h-px bg-gray-50" />}
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
+              )}
 
             </div>
 
-            {/* 고정 하단 버튼 — 항상 보임 */}
+            {/* 고정 하단 버튼 */}
             <div className="px-6 pt-3 pb-8 flex-shrink-0 border-t border-gray-100 bg-white">
               {togetherError && (
                 <p className="text-[12px] font-medium text-black text-center mb-2">{togetherError}</p>
               )}
-              <button
-                onClick={handleStartTogether}
-                disabled={togetherLoading || togetherStudentIds.size === 0 || (!usesDaySelect && !togetherWbId)}
-                className="w-full bg-black text-white font-bold py-4 rounded-full text-[15px] tracking-tight active:scale-[0.97] transition disabled:opacity-40"
-              >
-                {togetherLoading ? '시작 중...' : '시작하기 →'}
-              </button>
+              {togetherStep === 1 ? (
+                <button
+                  onClick={() => setTogetherStep(2)}
+                  disabled={togetherStudentIds.size === 0}
+                  className="w-full bg-black text-white font-bold py-4 rounded-full text-[15px] tracking-tight active:scale-[0.97] transition disabled:opacity-40"
+                >
+                  다음 · {togetherStudentIds.size}명 선택 →
+                </button>
+              ) : (
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setTogetherStep(1)}
+                    disabled={togetherLoading}
+                    className="flex-none border border-gray-200 text-gray-600 font-bold py-4 px-5 rounded-full text-[15px] tracking-tight active:scale-[0.97] transition hover:border-gray-400 disabled:opacity-40"
+                  >←</button>
+                  <button
+                    onClick={handleStartTogether}
+                    disabled={togetherLoading || (!usesDaySelect && !togetherWbId)}
+                    className="flex-1 bg-black text-white font-bold py-4 rounded-full text-[15px] tracking-tight active:scale-[0.97] transition disabled:opacity-40"
+                  >
+                    {togetherLoading ? '시작 중...' : '테스트 시작 →'}
+                  </button>
+                </div>
+              )}
             </div>
 
           </div>
