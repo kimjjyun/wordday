@@ -52,21 +52,26 @@ export default function ClassDetailPage() {
   const [togetherWbId,        setTogetherWbId]        = useState(null);
   const [togetherStudentIds,  setTogetherStudentIds]  = useState(new Set());
   const [togetherLoading,     setTogetherLoading]     = useState(false);
+  const [togetherError,       setTogetherError]       = useState('');
 
   const openTogether = () => {
     if (!cls) return;
     setTogetherWbId(cls.wordBooks?.[0]?.id ?? null);
     setTogetherStudentIds(new Set((cls.students ?? []).map(s => s.id)));
+    setTogetherError('');
     setShowTogether(true);
   };
 
   const handleStartTogether = async () => {
     if (!togetherWbId) return;
     setTogetherLoading(true);
+    setTogetherError('');
     try {
       const res = await createTest({ classId: id, wordBookId: togetherWbId, targetStudentIds: [...togetherStudentIds] });
       setShowTogether(false);
       navigate(`/teacher/test/${res.data.id}/run`, { state: { targetStudentIds: [...togetherStudentIds] } });
+    } catch {
+      setTogetherError('시작 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
     } finally {
       setTogetherLoading(false);
     }
@@ -209,106 +214,126 @@ export default function ClassDetailPage() {
       {showTogether && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50"
           onClick={() => !togetherLoading && setShowTogether(false)}>
-          <div className="bg-white w-full max-w-lg rounded-t-[28px] px-6 pt-6 pb-10 animate-slide-up max-h-[85vh] overflow-y-auto"
+          {/* flex-col 구조: 헤더 고정 / 내용 스크롤 / 버튼 고정 */}
+          <div className="bg-white w-full max-w-lg rounded-t-[28px] animate-slide-up flex flex-col"
+            style={{ maxHeight: '85vh' }}
             onClick={e => e.stopPropagation()}>
-            <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-6" />
-            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-gray-300 mb-1">Together</p>
-            <h2 className="text-2xl font-black tracking-tighter mb-5">함께하기 시작</h2>
 
-            {/* 단어장 선택 */}
-            <div className="mb-5">
-              <p className="text-[11px] font-bold uppercase tracking-wider text-gray-300 mb-2">단어장 선택</p>
-              {cls.wordBooks?.length === 0 ? (
-                <p className="text-[13px] text-gray-300 py-2">단어장이 없습니다. 먼저 단어장을 만들어주세요.</p>
-              ) : (
-                <div className="space-y-1.5">
-                  {cls.wordBooks.map(wb => (
-                    <button key={wb.id}
-                      onClick={() => setTogetherWbId(wb.id)}
-                      className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl border-2 text-left transition ${
-                        togetherWbId === wb.id ? 'border-black bg-black/5' : 'border-gray-100 hover:border-gray-300'
-                      }`}
-                    >
-                      <div className={`w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition ${
-                        togetherWbId === wb.id ? 'border-black bg-black' : 'border-gray-300'
-                      }`}>
-                        {togetherWbId === wb.id && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
-                      </div>
-                      <div>
-                        <p className="font-bold text-[14px] text-black">{wb.title}</p>
-                        <p className="text-[11px] text-gray-300 font-medium">{wb.week}주차</p>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
+            {/* 고정 헤더 */}
+            <div className="px-6 pt-6 flex-shrink-0">
+              <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-6" />
+              <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-gray-300 mb-1">Together</p>
+              <h2 className="text-2xl font-black tracking-tighter mb-5">함께하기 시작</h2>
             </div>
 
-            {/* 학생 선택 */}
-            <div className="mb-6">
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-[11px] font-bold uppercase tracking-wider text-gray-300">학생 선택</p>
-                <div className="flex gap-1.5">
-                  <button
-                    onClick={() => setTogetherStudentIds(new Set((cls.students ?? []).map(s => s.id)))}
-                    className="text-[11px] font-bold text-black border border-gray-200 rounded-full px-2.5 py-1 hover:border-gray-400 transition"
-                  >전체</button>
-                  <button
-                    onClick={() => setTogetherStudentIds(new Set())}
-                    className="text-[11px] font-bold text-gray-400 border border-gray-200 rounded-full px-2.5 py-1 hover:border-gray-400 transition"
-                  >해제</button>
-                </div>
+            {/* 스크롤 가능한 내용 영역 */}
+            <div className="flex-1 overflow-y-auto px-6">
+
+              {/* 단어장 선택 */}
+              <div className="mb-5">
+                <p className="text-[11px] font-bold uppercase tracking-wider text-gray-300 mb-2">단어장 선택</p>
+                {cls.wordBooks?.length === 0 ? (
+                  <p className="text-[13px] text-black font-medium py-2 bg-gray-50 rounded-2xl px-4">
+                    단어장이 없습니다. 먼저 단어장을 만들어주세요.
+                  </p>
+                ) : (
+                  <div className="space-y-1.5">
+                    {cls.wordBooks.map(wb => (
+                      <button key={wb.id}
+                        onClick={() => setTogetherWbId(wb.id)}
+                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl border-2 text-left transition ${
+                          togetherWbId === wb.id ? 'border-black bg-black/5' : 'border-gray-100 hover:border-gray-300'
+                        }`}
+                      >
+                        <div className={`w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition ${
+                          togetherWbId === wb.id ? 'border-black bg-black' : 'border-gray-300'
+                        }`}>
+                          {togetherWbId === wb.id && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                        </div>
+                        <div>
+                          <p className="font-bold text-[14px] text-black">{wb.title}</p>
+                          <p className="text-[11px] text-gray-300 font-medium">{wb.week}주차</p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
-              {cls.students?.length === 0 ? (
-                <p className="text-[13px] text-gray-300 py-2">등록된 학생이 없습니다.</p>
-              ) : (
-                <div className="border border-gray-100 rounded-2xl overflow-hidden">
-                  {[...(cls.students)].sort((a, b) =>
-                    (parseInt(a.studentCode) || 0) - (parseInt(b.studentCode) || 0) || a.studentCode.localeCompare(b.studentCode)
-                  ).map((s, i, arr) => {
-                    const checked = togetherStudentIds.has(s.id);
-                    return (
-                      <div key={s.id}>
-                        <button
-                          onClick={() => setTogetherStudentIds(prev => {
-                            const next = new Set(prev);
-                            checked ? next.delete(s.id) : next.add(s.id);
-                            return next;
-                          })}
-                          className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-gray-50 transition"
-                        >
-                          <div className={`w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition ${
-                            checked ? 'bg-black border-black' : 'border-gray-200'
-                          }`}>
-                            {checked && (
-                              <svg width="8" height="6" viewBox="0 0 8 6" fill="none">
-                                <path d="M1 3L3 5L7 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                              </svg>
-                            )}
-                          </div>
-                          <span className="font-bold text-[14px] text-black flex-1">{s.name}</span>
-                          <span className="text-[12px] text-gray-300 font-medium">{s.studentCode}</span>
-                        </button>
-                        {i < arr.length - 1 && <div className="h-px bg-gray-50" />}
-                      </div>
-                    );
-                  })}
+
+              {/* 학생 선택 */}
+              <div className="mb-4">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-gray-300">
+                    학생 선택 <span className="text-black">{togetherStudentIds.size}명</span>
+                  </p>
+                  <div className="flex gap-1.5">
+                    <button
+                      onClick={() => setTogetherStudentIds(new Set((cls.students ?? []).map(s => s.id)))}
+                      className="text-[11px] font-bold text-black border border-gray-200 rounded-full px-2.5 py-1 hover:border-gray-400 transition"
+                    >전체</button>
+                    <button
+                      onClick={() => setTogetherStudentIds(new Set())}
+                      className="text-[11px] font-bold text-gray-400 border border-gray-200 rounded-full px-2.5 py-1 hover:border-gray-400 transition"
+                    >해제</button>
+                  </div>
                 </div>
-              )}
-              {cls.students?.length > 0 && (
-                <p className="text-[11px] text-gray-300 font-medium text-center mt-2">
-                  {togetherStudentIds.size}명 선택됨
-                </p>
-              )}
+                {cls.students?.length === 0 ? (
+                  <p className="text-[13px] text-gray-300 py-2">등록된 학생이 없습니다.</p>
+                ) : (
+                  <div className="border border-gray-100 rounded-2xl overflow-hidden">
+                    {[...(cls.students)].sort((a, b) =>
+                      (parseInt(a.studentCode) || 0) - (parseInt(b.studentCode) || 0) || a.studentCode.localeCompare(b.studentCode)
+                    ).map((s, i, arr) => {
+                      const checked = togetherStudentIds.has(s.id);
+                      return (
+                        <div key={s.id}>
+                          <button
+                            onClick={() => setTogetherStudentIds(prev => {
+                              const next = new Set(prev);
+                              checked ? next.delete(s.id) : next.add(s.id);
+                              return next;
+                            })}
+                            className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-gray-50 transition"
+                          >
+                            <div className={`w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition ${
+                              checked ? 'bg-black border-black' : 'border-gray-200'
+                            }`}>
+                              {checked && (
+                                <svg width="8" height="6" viewBox="0 0 8 6" fill="none">
+                                  <path d="M1 3L3 5L7 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                                </svg>
+                              )}
+                            </div>
+                            <span className="font-bold text-[14px] text-black flex-1">{s.name}</span>
+                            <span className="text-[12px] text-gray-300 font-medium">{s.studentCode}</span>
+                          </button>
+                          {i < arr.length - 1 && <div className="h-px bg-gray-50" />}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
             </div>
 
-            <button
-              onClick={handleStartTogether}
-              disabled={togetherLoading || !togetherWbId || togetherStudentIds.size === 0}
-              className="w-full bg-black text-white font-bold py-4 rounded-full text-[15px] tracking-tight active:scale-[0.97] transition disabled:opacity-40"
-            >
-              {togetherLoading ? '시작 중...' : `시작하기 →`}
-            </button>
+            {/* 고정 하단 버튼 — 항상 보임 */}
+            <div className="px-6 pt-3 pb-8 flex-shrink-0 border-t border-gray-100 bg-white">
+              {togetherError && (
+                <p className="text-[12px] font-medium text-black text-center mb-2">{togetherError}</p>
+              )}
+              {cls.wordBooks?.length === 0 && (
+                <p className="text-[12px] text-gray-400 text-center mb-2">단어장을 먼저 추가해주세요</p>
+              )}
+              <button
+                onClick={handleStartTogether}
+                disabled={togetherLoading || !togetherWbId || togetherStudentIds.size === 0}
+                className="w-full bg-black text-white font-bold py-4 rounded-full text-[15px] tracking-tight active:scale-[0.97] transition disabled:opacity-40"
+              >
+                {togetherLoading ? '시작 중...' : `시작하기 →`}
+              </button>
+            </div>
+
           </div>
         </div>
       )}
