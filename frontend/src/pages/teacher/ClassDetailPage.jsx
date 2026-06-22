@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getClass, bulkCreateStudents, deleteStudent } from '../../api/classes';
+import { getClass, bulkCreateStudents, deleteStudent, updateStudent } from '../../api/classes';
 import { createWordBook } from '../../api/wordbooks';
 import { getClassTestHistory } from '../../api/tests';
 import Layout from '../../components/Layout';
@@ -15,27 +15,33 @@ function downloadStudentTemplate() {
 }
 
 const inputCls = 'w-full border border-gray-200 rounded-2xl px-4 py-3 text-[14px] font-medium outline-none focus:border-black transition placeholder:text-gray-300 placeholder:font-normal bg-white';
+const smallInputCls = 'border border-gray-200 rounded-xl px-2.5 py-2 text-[13px] font-medium outline-none focus:border-black bg-white placeholder:text-gray-200';
 
 export default function ClassDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const fileRef  = useRef(null);
 
-  const [cls,       setCls]       = useState(null);
-  const [loading,   setLoading]   = useState(true);
-  const [showAddWb, setShowAddWb] = useState(false);
-  const [showBulk,  setShowBulk]  = useState(false);
-  const [bulkTab,   setBulkTab]   = useState('direct');
-  const [wbForm,    setWbForm]    = useState({ title: '', week: '' });
-  const [rows,      setRows]      = useState([{ name: '', studentCode: '', password: '' }]);
-  const [directMsg, setDirectMsg] = useState('');
+  const [cls,          setCls]          = useState(null);
+  const [loading,      setLoading]      = useState(true);
+  const [showAddWb,    setShowAddWb]    = useState(false);
+  const [showBulk,     setShowBulk]     = useState(false);
+  const [bulkTab,      setBulkTab]      = useState('direct');
+  const [wbForm,       setWbForm]       = useState({ title: '', week: '' });
+  const [rows,         setRows]         = useState([{ name: '', studentCode: '', password: '' }]);
+  const [directMsg,    setDirectMsg]    = useState('');
   const [directLoading, setDirectLoading] = useState(false);
-  const [csvLoading,    setCsvLoading]    = useState(false);
-  const [csvResult,     setCsvResult]     = useState(null);
-  const [csvError,      setCsvError]      = useState('');
-  const [deletingId,    setDeletingId]    = useState(null);
-  const [confirmStudentId, setConfirmStudentId] = useState(null);
-  const [testHistory,   setTestHistory]   = useState([]);
+  const [csvLoading,   setCsvLoading]   = useState(false);
+  const [csvResult,    setCsvResult]    = useState(null);
+  const [csvError,     setCsvError]     = useState('');
+  const [testHistory,  setTestHistory]  = useState([]);
+
+  // 학생 선택 / 수정
+  const [selectedIds,  setSelectedIds]  = useState(new Set());
+  const [editForm,     setEditForm]     = useState(null); // { id, name, studentCode, password }
+  const [editLoading,  setEditLoading]  = useState(false);
+  const [editMsg,      setEditMsg]      = useState('');
+  const [actionLoading, setActionLoading] = useState(false);
 
   const load = () => getClass(id).then(r => setCls(r.data)).finally(() => setLoading(false));
   useEffect(() => { load(); }, [id]);
@@ -58,7 +64,9 @@ export default function ClassDetailPage() {
     if (!valid.length) { setDirectMsg('이름과 학번을 입력하세요.'); return; }
     setDirectLoading(true); setDirectMsg('');
     try {
-      const res = await bulkCreateStudents(id, valid.map(r => ({ name: r.name.trim(), studentCode: r.studentCode.trim(), password: r.password.trim() || '1234' })));
+      const res = await bulkCreateStudents(id, valid.map(r => ({
+        name: r.name.trim(), studentCode: r.studentCode.trim(), password: r.password.trim() || '1234',
+      })));
       setRows([{ name: '', studentCode: '', password: '' }]);
       setDirectMsg(`${res.data.created}명 등록 완료`);
       load();
@@ -89,12 +97,53 @@ export default function ClassDetailPage() {
     finally { setCsvLoading(false); if (fileRef.current) fileRef.current.value = ''; }
   };
 
-  const handleDeleteStudent = async (studentId) => {
-    setDeletingId(studentId);
-    setConfirmStudentId(null);
-    try { await deleteStudent(id, studentId); load(); }
-    catch { /* no-op */ }
-    finally { setDeletingId(null); }
+  // ── 선택 토글 ────────────────────────────────────────────────
+  const toggleSelect = (sid) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(sid)) next.delete(sid);
+      else next.add(sid);
+      return next;
+    });
+    setEditForm(null);
+    setEditMsg('');
+  };
+
+  const clearSelection = () => { setSelectedIds(new Set()); setEditForm(null); setEditMsg(''); };
+
+  // ── 선택 삭제 ────────────────────────────────────────────────
+  const handleBulkDelete = async () => {
+    setActionLoading(true);
+    try {
+      await Promise.all([...selectedIds].map(sid => deleteStudent(id, sid)));
+      clearSelection();
+      load();
+    } catch { /* no-op */ }
+    finally { setActionLoading(false); }
+  };
+
+  // ── 수정 시작 ────────────────────────────────────────────────
+  const handleEditStart = () => {
+    const sid = [...selectedIds][0];
+    const student = cls.students.find(s => s.id === sid);
+    if (student) setEditForm({ id: student.id, name: student.name, studentCode: student.studentCode, password: '' });
+    setEditMsg('');
+  };
+
+  // ── 수정 저장 ────────────────────────────────────────────────
+  const handleEditSubmit = async () => {
+    if (!editForm) return;
+    setEditLoading(true); setEditMsg('');
+    try {
+      await updateStudent(id, editForm.id, {
+        name: editForm.name,
+        studentCode: editForm.studentCode,
+        ...(editForm.password ? { password: editForm.password } : {}),
+      });
+      clearSelection();
+      load();
+    } catch { setEditMsg('수정 중 오류가 발생했습니다.'); }
+    finally { setEditLoading(false); }
   };
 
   if (loading || !cls) return (
@@ -135,7 +184,11 @@ export default function ClassDetailPage() {
               Students · {cls.students?.length ?? 0}
             </p>
             <button
-              onClick={() => { setShowBulk(v => !v); setDirectMsg(''); setCsvResult(null); setCsvError(''); }}
+              onClick={() => {
+                setShowBulk(v => !v);
+                setDirectMsg(''); setCsvResult(null); setCsvError('');
+                clearSelection();
+              }}
               className="text-[12px] font-bold text-black border border-gray-200 rounded-full px-3 py-1 hover:border-gray-400 transition"
             >{showBulk ? '닫기' : '등록'}</button>
           </div>
@@ -163,9 +216,9 @@ export default function ClassDetailPage() {
                   </div>
                   {rows.map((row, i) => (
                     <div key={i} className="grid grid-cols-12 gap-1 items-center">
-                      <input className="col-span-4 border border-gray-200 rounded-xl px-2.5 py-2 text-[13px] font-medium outline-none focus:border-black bg-white placeholder:text-gray-200" placeholder="이름" value={row.name} onChange={e => updateRow(i, 'name', e.target.value)} />
-                      <input className="col-span-4 border border-gray-200 rounded-xl px-2.5 py-2 text-[13px] font-medium outline-none focus:border-black bg-white placeholder:text-gray-200" placeholder="학번" value={row.studentCode} onChange={e => updateRow(i, 'studentCode', e.target.value)} />
-                      <input className="col-span-3 border border-gray-200 rounded-xl px-2.5 py-2 text-[13px] font-medium outline-none focus:border-black bg-white placeholder:text-gray-200" placeholder="1234" value={row.password} onChange={e => updateRow(i, 'password', e.target.value)} />
+                      <input className={`col-span-4 ${smallInputCls}`} placeholder="이름" value={row.name} onChange={e => updateRow(i, 'name', e.target.value)} />
+                      <input className={`col-span-4 ${smallInputCls}`} placeholder="학번" value={row.studentCode} onChange={e => updateRow(i, 'studentCode', e.target.value)} />
+                      <input className={`col-span-3 ${smallInputCls}`} placeholder="1234" value={row.password} onChange={e => updateRow(i, 'password', e.target.value)} />
                       <button onClick={() => removeRow(i)} className="col-span-1 text-gray-300 hover:text-black text-xl font-bold text-center transition">×</button>
                     </div>
                   ))}
@@ -211,38 +264,120 @@ export default function ClassDetailPage() {
           {cls.students?.length === 0 ? (
             <p className="text-[13px] text-gray-300 font-medium py-4">등록된 학생이 없습니다</p>
           ) : (
-            <div className="max-h-60 overflow-y-auto">
-              {cls.students.map((s, i) => (
-                <div key={s.id}>
-                  <div className="flex items-center justify-between py-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-4 h-4 rounded-full border border-gray-200" />
-                      <span className="font-bold text-[15px] tracking-tight">{s.name}</span>
-                      <span className="text-[12px] text-gray-300 font-medium">{s.studentCode}</span>
-                    </div>
-                    {confirmStudentId === s.id ? (
-                      <div className="flex items-center gap-2">
+            <div>
+              <div className="max-h-72 overflow-y-auto">
+                {cls.students.map((s, i) => {
+                  const isSelected = selectedIds.has(s.id);
+                  const isEditing  = editForm?.id === s.id;
+                  return (
+                    <div key={s.id}>
+                      {/* 학생 행 */}
+                      <div className="flex items-center gap-3 py-3">
+                        {/* 동그라미 체크 버튼 */}
                         <button
-                          onClick={() => handleDeleteStudent(s.id)}
-                          disabled={deletingId === s.id}
-                          className="text-[11px] font-bold text-black transition disabled:opacity-40"
-                        >확인</button>
-                        <button
-                          onClick={() => setConfirmStudentId(null)}
-                          className="text-[11px] font-bold text-gray-300 hover:text-black transition"
-                        >취소</button>
+                          onClick={() => toggleSelect(s.id)}
+                          className={`w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all ${
+                            isSelected
+                              ? 'bg-black border-black'
+                              : 'border-gray-200 bg-white hover:border-gray-400'
+                          }`}
+                        >
+                          {isSelected && (
+                            <svg width="8" height="6" viewBox="0 0 8 6" fill="none">
+                              <path d="M1 3L3 5L7 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                            </svg>
+                          )}
+                        </button>
+                        <span className={`font-bold text-[15px] tracking-tight transition ${isSelected ? 'text-black' : 'text-black'}`}>
+                          {s.name}
+                        </span>
+                        <span className="text-[12px] text-gray-300 font-medium">{s.studentCode}</span>
                       </div>
-                    ) : (
-                      <button
-                        onClick={() => setConfirmStudentId(s.id)}
-                        disabled={deletingId === s.id}
-                        className="text-[11px] font-bold text-gray-300 hover:text-black transition disabled:opacity-40 px-2 py-1"
-                      >삭제</button>
-                    )}
-                  </div>
-                  {i < cls.students.length - 1 && <div className="h-px bg-gray-50" />}
+
+                      {/* 수정 인라인 폼 */}
+                      {isEditing && (
+                        <div className="mb-2 ml-8 bg-gray-50 rounded-2xl p-3 space-y-2">
+                          <div className="grid grid-cols-2 gap-1.5">
+                            <div>
+                              <p className="text-[10px] font-bold text-gray-300 uppercase tracking-wider mb-1">이름</p>
+                              <input
+                                className={smallInputCls + ' w-full'}
+                                value={editForm.name}
+                                onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))}
+                                placeholder="이름"
+                              />
+                            </div>
+                            <div>
+                              <p className="text-[10px] font-bold text-gray-300 uppercase tracking-wider mb-1">학번</p>
+                              <input
+                                className={smallInputCls + ' w-full'}
+                                value={editForm.studentCode}
+                                onChange={e => setEditForm(f => ({ ...f, studentCode: e.target.value }))}
+                                placeholder="학번"
+                              />
+                            </div>
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-bold text-gray-300 uppercase tracking-wider mb-1">새 비밀번호 (빈칸이면 유지)</p>
+                            <input
+                              className={smallInputCls + ' w-full'}
+                              type="password"
+                              value={editForm.password}
+                              onChange={e => setEditForm(f => ({ ...f, password: e.target.value }))}
+                              placeholder="변경 시에만 입력"
+                            />
+                          </div>
+                          {editMsg && <p className="text-[11px] text-black text-center">{editMsg}</p>}
+                          <div className="flex gap-1.5 pt-0.5">
+                            <button
+                              onClick={handleEditSubmit}
+                              disabled={editLoading}
+                              className="flex-1 bg-black text-white text-[12px] font-bold py-2 rounded-full transition disabled:opacity-40"
+                            >
+                              {editLoading ? '저장 중...' : '저장'}
+                            </button>
+                            <button
+                              onClick={() => { setEditForm(null); setEditMsg(''); }}
+                              className="flex-1 border border-gray-200 text-[12px] font-bold py-2 rounded-full transition hover:border-gray-400"
+                            >
+                              취소
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {i < cls.students.length - 1 && <div className="h-px bg-gray-50" />}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* 선택 시 액션 바 */}
+              {selectedIds.size > 0 && !editForm && (
+                <div className="flex gap-2 mt-3">
+                  <button
+                    onClick={handleBulkDelete}
+                    disabled={actionLoading}
+                    className="flex-1 bg-black text-white text-[13px] font-bold py-2.5 rounded-full transition active:scale-[0.97] disabled:opacity-40"
+                  >
+                    {actionLoading ? '삭제 중...' : `삭제 (${selectedIds.size}명)`}
+                  </button>
+                  {selectedIds.size === 1 && (
+                    <button
+                      onClick={handleEditStart}
+                      className="flex-1 border border-gray-200 text-[13px] font-bold py-2.5 rounded-full transition hover:border-gray-400 active:scale-[0.97]"
+                    >
+                      수정
+                    </button>
+                  )}
+                  <button
+                    onClick={clearSelection}
+                    className="px-4 text-[13px] font-bold text-gray-300 hover:text-black transition"
+                  >
+                    취소
+                  </button>
                 </div>
-              ))}
+              )}
             </div>
           )}
         </div>

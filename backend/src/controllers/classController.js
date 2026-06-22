@@ -130,4 +130,33 @@ async function deleteStudent(req, res, next) {
   }
 }
 
-module.exports = { createClass, getClasses, getClass, bulkCreateStudents, deleteStudent };
+async function updateStudent(req, res, next) {
+  try {
+    const cls = await prisma.class.findFirst({
+      where: { id: req.params.id, teacherId: req.user.sub },
+    });
+    if (!cls) return res.status(404).json({ error: '학급을 찾을 수 없습니다.' });
+
+    const student = await prisma.student.findFirst({
+      where: { id: req.params.studentId, classId: cls.id },
+    });
+    if (!student) return res.status(404).json({ error: '학생을 찾을 수 없습니다.' });
+
+    const { name, studentCode, password } = req.body;
+    const data = {};
+    if (name) data.name = name;
+    if (studentCode) data.studentCode = String(studentCode);
+    if (password) data.password = await bcrypt.hash(password, 10);
+
+    const updated = await prisma.student.update({
+      where: { id: student.id },
+      data,
+      select: { id: true, name: true, studentCode: true },
+    });
+    res.json(updated);
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { createClass, getClasses, getClass, bulkCreateStudents, deleteStudent, updateStudent };
