@@ -17,6 +17,8 @@ model Teacher {
   createdAt        DateTime  @default(now())
   resetToken       String?
   resetTokenExpiry DateTime?
+  securityQuestion String?
+  securityAnswer   String?
 }
 
 // ─── 학급 ───────────────────────────────────────────────

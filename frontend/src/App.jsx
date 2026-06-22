@@ -19,7 +19,8 @@ import TestResultPage      from './pages/student/TestResultPage';
 import StudentSettingsPage from './pages/student/StudentSettingsPage';
 
 // 교사
-import TeacherDashboard from './pages/teacher/TeacherDashboard';
+import TeacherDashboard   from './pages/teacher/TeacherDashboard';
+import TeacherSettingsPage from './pages/teacher/TeacherSettingsPage';
 import ClassDetailPage  from './pages/teacher/ClassDetailPage';
 import WordBookPage     from './pages/teacher/WordBookPage';
 import TestRunPage      from './pages/teacher/TestRunPage';
@@ -55,6 +56,7 @@ export default function App() {
 
         {/* 교사 */}
         <Route path="/teacher"                  element={<RequireAuth role="teacher"><TeacherDashboard /></RequireAuth>} />
+        <Route path="/teacher/settings"         element={<RequireAuth role="teacher"><TeacherSettingsPage /></RequireAuth>} />
         <Route path="/teacher/classes/:id"      element={<RequireAuth role="teacher"><ClassDetailPage /></RequireAuth>} />
         <Route path="/teacher/wordbooks/:id"    element={<RequireAuth role="teacher"><WordBookPage /></RequireAuth>} />
         <Route path="/teacher/test/:id/run"     element={<RequireAuth role="teacher"><TestRunPage /></RequireAuth>} />

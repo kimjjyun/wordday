@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getClasses, createClass } from '../../api/classes';
+import { useAuthStore } from '../../store/authStore';
 import Layout from '../../components/Layout';
 
 export default function TeacherDashboard() {
   const navigate = useNavigate();
+  const user = useAuthStore(s => s.user);
   const [classes,    setClasses]    = useState([]);
   const [showCreate, setShowCreate] = useState(false);
   const [newName,    setNewName]    = useState('');
@@ -24,10 +26,29 @@ export default function TeacherDashboard() {
       <div className="pb-8">
 
         {/* 섹션 헤더 */}
-        <div className="pt-2 pb-5">
-          <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-gray-300 mb-1">Teacher</p>
-          <h1 className="text-4xl font-black tracking-tighter">내 학급</h1>
+        <div className="pt-2 pb-5 flex items-end justify-between">
+          <div>
+            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-gray-300 mb-1">Teacher</p>
+            <h1 className="text-4xl font-black tracking-tighter">내 학급</h1>
+          </div>
+          <button
+            onClick={() => navigate('/teacher/settings')}
+            className="text-[12px] font-bold text-gray-400 hover:text-black transition pb-1"
+          >
+            보안 질문 설정
+          </button>
         </div>
+
+        {/* 보안 질문 미설정 안내 */}
+        {user && user.hasSecurityQuestion === false && (
+          <button
+            onClick={() => navigate('/teacher/settings')}
+            className="w-full text-left bg-gray-50 border border-gray-200 rounded-2xl px-4 py-3.5 mb-5 hover:border-gray-400 transition"
+          >
+            <p className="text-[13px] font-bold text-black">🔒 보안 질문을 설정하세요</p>
+            <p className="text-[12px] text-gray-400 font-medium mt-0.5">설정해 두면 비밀번호를 잊어도 안전하게 재설정할 수 있어요. →</p>
+          </button>
+        )}
 
         <div className="h-px bg-gray-100 mb-5" />
 
