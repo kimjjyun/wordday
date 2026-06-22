@@ -29,7 +29,7 @@ export default function ClassDetailPage() {
   const [showBulk,     setShowBulk]     = useState(false);
   const [bulkTab,      setBulkTab]      = useState('direct');
   const [wbForm,       setWbForm]       = useState({ title: '', week: '' });
-  const [withDefault,  setWithDefault]  = useState(false);
+  const [withDefault,  setWithDefault]  = useState(true);
   const [wbLoading,    setWbLoading]    = useState(false);
   const [studentSort,  setStudentSort]  = useState('code'); // 'code' | 'name'
   const [rows,         setRows]         = useState([{ name: '', studentCode: '', password: '' }]);
@@ -63,11 +63,21 @@ export default function ClassDetailPage() {
   };
 
   const handleStartTogether = async () => {
-    if (!togetherWbId) return;
+    if (togetherStudentIds.size === 0) return;
     setTogetherLoading(true);
     setTogetherError('');
     try {
-      const res = await createTest({ classId: id, wordBookId: togetherWbId, targetStudentIds: [...togetherStudentIds] });
+      let wbId = togetherWbId;
+      if (!wbId) {
+        // 단어장 없으면 기본 단어장(1825개) 자동 생성
+        const wbRes = await createWordBook({ classId: id, title: '기본 단어장', week: 1 });
+        wbId = wbRes.data.id;
+        await bulkAddWords(wbId, RECOMMENDED_WORDS.map(w => ({
+          english: w.english, korean: w.korean,
+          example: w.example || '', pronunciation: w.pronunciation || '',
+        })));
+      }
+      const res = await createTest({ classId: id, wordBookId: wbId, targetStudentIds: [...togetherStudentIds] });
       setShowTogether(false);
       navigate(`/teacher/test/${res.data.id}/run`, { state: { targetStudentIds: [...togetherStudentIds] } });
     } catch {
@@ -96,7 +106,7 @@ export default function ClassDetailPage() {
         await bulkAddWords(res.data.id, words);
       }
       setWbForm({ title: '', week: '' });
-      setWithDefault(false);
+      setWithDefault(true);
       setShowAddWb(false);
       load();
     } finally {
@@ -233,9 +243,10 @@ export default function ClassDetailPage() {
               <div className="mb-5">
                 <p className="text-[11px] font-bold uppercase tracking-wider text-gray-300 mb-2">단어장 선택</p>
                 {cls.wordBooks?.length === 0 ? (
-                  <p className="text-[13px] text-black font-medium py-2 bg-gray-50 rounded-2xl px-4">
-                    단어장이 없습니다. 먼저 단어장을 만들어주세요.
-                  </p>
+                  <div className="bg-gray-50 rounded-2xl px-4 py-3">
+                    <p className="text-[13px] font-bold text-black">기본 단어장 자동 생성</p>
+                    <p className="text-[11px] text-gray-400 mt-0.5">수능·고교 필수 어휘 1,825개가 자동으로 만들어집니다</p>
+                  </div>
                 ) : (
                   <div className="space-y-1.5">
                     {cls.wordBooks.map(wb => (
@@ -322,15 +333,17 @@ export default function ClassDetailPage() {
               {togetherError && (
                 <p className="text-[12px] font-medium text-black text-center mb-2">{togetherError}</p>
               )}
-              {cls.wordBooks?.length === 0 && (
-                <p className="text-[12px] text-gray-400 text-center mb-2">단어장을 먼저 추가해주세요</p>
+              {!togetherWbId && !togetherError && (
+                <p className="text-[11px] text-gray-400 text-center mb-2">
+                  기본 단어장(1,825개)이 자동으로 생성됩니다
+                </p>
               )}
               <button
                 onClick={handleStartTogether}
-                disabled={togetherLoading || !togetherWbId || togetherStudentIds.size === 0}
+                disabled={togetherLoading || togetherStudentIds.size === 0}
                 className="w-full bg-black text-white font-bold py-4 rounded-full text-[15px] tracking-tight active:scale-[0.97] transition disabled:opacity-40"
               >
-                {togetherLoading ? '시작 중...' : `시작하기 →`}
+                {togetherLoading ? '시작 중...' : '시작하기 →'}
               </button>
             </div>
 
@@ -636,7 +649,7 @@ export default function ClassDetailPage() {
                 <button onClick={handleAddWordBook} disabled={wbLoading} className="flex-1 bg-black text-white font-bold py-3 rounded-full text-[14px] tracking-tight active:scale-[0.97] transition disabled:opacity-40">
                   {wbLoading ? (withDefault ? '단어 추가 중...' : '생성 중...') : '만들기'}
                 </button>
-                <button onClick={() => { setShowAddWb(false); setWithDefault(false); }} disabled={wbLoading} className="flex-1 border border-gray-200 text-black font-bold py-3 rounded-full text-[14px] tracking-tight active:scale-[0.97] transition disabled:opacity-40">취소</button>
+                <button onClick={() => { setShowAddWb(false); setWithDefault(true); }} disabled={wbLoading} className="flex-1 border border-gray-200 text-black font-bold py-3 rounded-full text-[14px] tracking-tight active:scale-[0.97] transition disabled:opacity-40">취소</button>
               </div>
             </div>
           )}
