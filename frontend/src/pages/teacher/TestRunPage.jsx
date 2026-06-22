@@ -70,7 +70,7 @@ export default function TestRunPage() {
   };
 
   return (
-    <Layout title="조회 테스트 진행" back={status === 'waiting'}>
+    <Layout title="조회 테스트 진행" back>
       <div className="space-y-5">
         {status === 'waiting' && (
           <>

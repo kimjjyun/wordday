@@ -22,7 +22,7 @@ export default function TeacherDashboard() {
   };
 
   return (
-    <Layout title="WORDDAY">
+    <Layout title="WORDDAY" back={false}>
       <div className="pb-8">
 
         {/* 섹션 헤더 */}

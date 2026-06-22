@@ -74,7 +74,7 @@ export default function StudentHome() {
   const allDone   = !loading && stats && stats.due === 0 && stats.totalWords > 0;
 
   return (
-    <Layout title="WORDDAY">
+    <Layout title="WORDDAY" back={false}>
 
       {/* 테스트 초대 모달 */}
       {invite && (

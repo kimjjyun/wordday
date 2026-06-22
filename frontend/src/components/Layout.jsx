@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 
-export default function Layout({ title, back, children }) {
+export default function Layout({ title, back = true, children }) {
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
 
