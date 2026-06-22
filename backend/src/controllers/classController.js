@@ -53,7 +53,10 @@ async function getClass(req, res, next) {
     const cls = await prisma.class.findFirst({
       where: { id: req.params.id, teacherId: req.user.sub },
       include: {
-        students: { select: { id: true, name: true, studentCode: true, createdAt: true } },
+        students: {
+          select: { id: true, name: true, studentCode: true, createdAt: true },
+          orderBy: { studentCode: 'asc' },
+        },
         wordBooks: { select: { id: true, title: true, week: true, isActive: true } },
       },
     });
@@ -86,7 +89,8 @@ async function bulkCreateStudents(req, res, next) {
           return { error: { studentCode: s.studentCode, reason: '이름 또는 학번 누락' } };
         }
         try {
-          const hashed = await bcrypt.hash(s.password || '1234', 10);
+          // cost 8: 학생 계정은 교사가 초기화하므로 cost 10 대비 4배 빠름
+          const hashed = await bcrypt.hash(s.password || '1234', 8);
           const student = await prisma.student.create({
             data: { name: s.name, studentCode: String(s.studentCode), password: hashed, classId: cls.id },
           });
@@ -146,7 +150,7 @@ async function updateStudent(req, res, next) {
     const data = {};
     if (name) data.name = name;
     if (studentCode) data.studentCode = String(studentCode);
-    if (password) data.password = await bcrypt.hash(password, 10);
+    if (password) data.password = await bcrypt.hash(password, 8);
 
     const updated = await prisma.student.update({
       where: { id: student.id },

@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getClass, bulkCreateStudents, deleteStudent, updateStudent } from '../../api/classes';
-import { createWordBook } from '../../api/wordbooks';
+import { createWordBook, bulkAddWords } from '../../api/wordbooks';
 import { getClassTestHistory } from '../../api/tests';
+import { RECOMMENDED_WORDS } from '../../data/recommendedWords';
 import Layout from '../../components/Layout';
 
 function downloadStudentTemplate() {
@@ -28,6 +29,9 @@ export default function ClassDetailPage() {
   const [showBulk,     setShowBulk]     = useState(false);
   const [bulkTab,      setBulkTab]      = useState('direct');
   const [wbForm,       setWbForm]       = useState({ title: '', week: '' });
+  const [withDefault,  setWithDefault]  = useState(false);
+  const [wbLoading,    setWbLoading]    = useState(false);
+  const [studentSort,  setStudentSort]  = useState('code'); // 'code' | 'name'
   const [rows,         setRows]         = useState([{ name: '', studentCode: '', password: '' }]);
   const [directMsg,    setDirectMsg]    = useState('');
   const [directLoading, setDirectLoading] = useState(false);
@@ -51,8 +55,23 @@ export default function ClassDetailPage() {
 
   const handleAddWordBook = async () => {
     if (!wbForm.title || !wbForm.week) return;
-    await createWordBook({ classId: id, title: wbForm.title, week: Number(wbForm.week) });
-    setWbForm({ title: '', week: '' }); setShowAddWb(false); load();
+    setWbLoading(true);
+    try {
+      const res = await createWordBook({ classId: id, title: wbForm.title, week: Number(wbForm.week) });
+      if (withDefault) {
+        const words = RECOMMENDED_WORDS.map(w => ({
+          english: w.english, korean: w.korean,
+          example: w.example || '', pronunciation: w.pronunciation || '',
+        }));
+        await bulkAddWords(res.data.id, words);
+      }
+      setWbForm({ title: '', week: '' });
+      setWithDefault(false);
+      setShowAddWb(false);
+      load();
+    } finally {
+      setWbLoading(false);
+    }
   };
 
   const updateRow = (i, f, v) => setRows(prev => prev.map((r, idx) => idx === i ? { ...r, [f]: v } : r));
@@ -265,8 +284,21 @@ export default function ClassDetailPage() {
             <p className="text-[13px] text-gray-300 font-medium py-4">등록된 학생이 없습니다</p>
           ) : (
             <div>
+              {/* 정렬 토글 */}
+              <div className="flex gap-1 mb-2">
+                {[['code','번호순'], ['name','가나다순']].map(([k, l]) => (
+                  <button key={k} onClick={() => setStudentSort(k)}
+                    className={`text-[11px] font-bold px-2.5 py-1 rounded-full transition ${
+                      studentSort === k ? 'bg-black text-white' : 'border border-gray-200 text-gray-300 hover:border-gray-400'
+                    }`}>{l}
+                  </button>
+                ))}
+              </div>
               <div className="max-h-72 overflow-y-auto">
-                {cls.students.map((s, i) => {
+                {[...(cls.students)].sort((a, b) => studentSort === 'name'
+                  ? a.name.localeCompare(b.name, 'ko')
+                  : (parseInt(a.studentCode) || 0) - (parseInt(b.studentCode) || 0) || a.studentCode.localeCompare(b.studentCode)
+                ).map((s, i, arr) => {
                   const isSelected = selectedIds.has(s.id);
                   const isEditing  = editForm?.id === s.id;
                   return (
@@ -346,7 +378,7 @@ export default function ClassDetailPage() {
                         </div>
                       )}
 
-                      {i < cls.students.length - 1 && <div className="h-px bg-gray-50" />}
+                      {i < arr.length - 1 && <div className="h-px bg-gray-50" />}
                     </div>
                   );
                 })}
@@ -398,9 +430,42 @@ export default function ClassDetailPage() {
             <div className="mb-4 bg-gray-50 rounded-[20px] p-4 space-y-2.5">
               <input className={inputCls + ' bg-gray-50'} placeholder="단어장 이름" value={wbForm.title} onChange={e => setWbForm(f => ({ ...f, title: e.target.value }))} />
               <input className={inputCls + ' bg-gray-50'} type="number" placeholder="주차 번호" value={wbForm.week} onChange={e => setWbForm(f => ({ ...f, week: e.target.value }))} />
+
+              {/* 기본 단어 포함 옵션 */}
+              <button
+                type="button"
+                onClick={() => setWithDefault(v => !v)}
+                className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl border-2 transition ${
+                  withDefault ? 'border-black bg-white' : 'border-gray-200 bg-white'
+                }`}
+              >
+                <div className="text-left">
+                  <p className={`text-[13px] font-bold ${withDefault ? 'text-black' : 'text-gray-400'}`}>
+                    기본 단어 {RECOMMENDED_WORDS.length.toLocaleString()}개 포함
+                  </p>
+                  <p className="text-[11px] text-gray-300 mt-0.5">수능/고교 필수 어휘 전체</p>
+                </div>
+                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition ${
+                  withDefault ? 'bg-black border-black' : 'border-gray-200'
+                }`}>
+                  {withDefault && (
+                    <svg width="8" height="6" viewBox="0 0 8 6" fill="none">
+                      <path d="M1 3L3 5L7 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  )}
+                </div>
+              </button>
+              {withDefault && (
+                <p className="text-[11px] text-gray-300 text-center">
+                  단어장 생성 후 자동으로 추가됩니다 (수 초 소요)
+                </p>
+              )}
+
               <div className="flex gap-2 pt-1">
-                <button onClick={handleAddWordBook} className="flex-1 bg-black text-white font-bold py-3 rounded-full text-[14px] tracking-tight active:scale-[0.97] transition">만들기</button>
-                <button onClick={() => setShowAddWb(false)} className="flex-1 border border-gray-200 text-black font-bold py-3 rounded-full text-[14px] tracking-tight active:scale-[0.97] transition">취소</button>
+                <button onClick={handleAddWordBook} disabled={wbLoading} className="flex-1 bg-black text-white font-bold py-3 rounded-full text-[14px] tracking-tight active:scale-[0.97] transition disabled:opacity-40">
+                  {wbLoading ? (withDefault ? '단어 추가 중...' : '생성 중...') : '만들기'}
+                </button>
+                <button onClick={() => { setShowAddWb(false); setWithDefault(false); }} disabled={wbLoading} className="flex-1 border border-gray-200 text-black font-bold py-3 rounded-full text-[14px] tracking-tight active:scale-[0.97] transition disabled:opacity-40">취소</button>
               </div>
             </div>
           )}
