@@ -28,7 +28,7 @@ function generateRoomCode() {
 
 async function createTestWithWords(req, res, next) {
   try {
-    const { classId, words } = req.body;
+    const { classId, words, targetStudentIds } = req.body;
     if (!classId || !Array.isArray(words) || words.length === 0) {
       return res.status(400).json({ error: 'classId와 words는 필수입니다.' });
     }
@@ -62,7 +62,7 @@ async function createTestWithWords(req, res, next) {
     });
 
     const test = await prisma.test.create({
-      data: { classId, wordBookId: wb.id, roomCode },
+      data: { classId, wordBookId: wb.id, roomCode, targetStudentIds: targetStudentIds ?? [] },
       select: { id: true, roomCode: true, status: true, createdAt: true },
     });
     res.status(201).json(test);

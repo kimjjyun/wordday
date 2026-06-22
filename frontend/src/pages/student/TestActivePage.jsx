@@ -32,6 +32,7 @@ export default function TestActivePage() {
   const [score, setScore]               = useState(0);
   const [submitted, setSubmitted]       = useState(false);
   const [advancing, setAdvancing]       = useState(false);
+  const [showExitConfirm, setShowExitConfirm] = useState(false);
 
   const answersRef   = useRef({});
   const wordsRef     = useRef([]);
@@ -80,6 +81,14 @@ export default function TestActivePage() {
       clearTestSocket();
     };
   }, [navigate, user.id]);
+
+  const handleExitConfirm = () => {
+    // 현재까지 답안 제출 후 홈으로
+    doSubmit();
+    const socket = socketRef.current;
+    if (socket) { socket.disconnect(); clearTestSocket(); }
+    navigate('/student');
+  };
 
   const doSubmit = () => {
     if (submittedRef.current) return;
@@ -136,9 +145,36 @@ export default function TestActivePage() {
   return (
     <div className="min-h-screen flex flex-col bg-white max-w-lg mx-auto">
 
-      {/* 상단 헤더: 진행바 + 점수 */}
+      {/* 나가기 확인 모달 */}
+      {showExitConfirm && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50">
+          <div className="bg-white w-full max-w-lg rounded-t-[28px] px-6 pt-6 pb-10 animate-slide-up">
+            <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-6" />
+            <h2 className="text-2xl font-black tracking-tighter mb-2">테스트를 나가시겠습니까?</h2>
+            <p className="text-[13px] text-gray-400 font-medium mb-8">
+              현재까지 풀었던 답이 제출됩니다.
+            </p>
+            <div className="space-y-2.5">
+              <button
+                onClick={handleExitConfirm}
+                className="w-full bg-black text-white font-bold py-4 rounded-full text-[15px] tracking-tight active:scale-[0.97] transition"
+              >나가기</button>
+              <button
+                onClick={() => setShowExitConfirm(false)}
+                className="w-full border border-gray-200 text-gray-600 font-bold py-4 rounded-full text-[15px] tracking-tight active:scale-[0.97] transition hover:border-gray-400"
+              >계속 풀기</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 상단 헤더: 나가기 + 진행바 + 점수 */}
       <div className="px-5 pt-4 pb-3">
         <div className="flex items-center gap-3 mb-2">
+          <button
+            onClick={() => setShowExitConfirm(true)}
+            className="text-[12px] font-bold text-gray-300 hover:text-black transition shrink-0"
+          >← 나가기</button>
           <div className="flex-1 bg-gray-100 rounded-full h-1.5 overflow-hidden">
             <div
               className="bg-black h-1.5 rounded-full transition-all duration-700"

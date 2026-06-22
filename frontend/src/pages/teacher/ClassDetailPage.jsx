@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getClass, bulkCreateStudents, deleteStudent, updateStudent } from '../../api/classes';
 import { createWordBook, bulkAddWords } from '../../api/wordbooks';
-import { createTest, getClassTestHistory } from '../../api/tests';
+import { createTest, createTestWithWords, getClassTestHistory } from '../../api/tests';
 import { RECOMMENDED_WORDS } from '../../data/recommendedWords';
 import Layout from '../../components/Layout';
 
@@ -48,15 +48,23 @@ export default function ClassDetailPage() {
   const [actionLoading, setActionLoading] = useState(false);
 
   // 함께하기 모달
+  const DAY_SIZE   = 25;                                          // DAY당 단어 수
+  const TOTAL_DAYS = Math.ceil(RECOMMENDED_WORDS.length / DAY_SIZE); // 73
+
   const [showTogether,        setShowTogether]        = useState(false);
   const [togetherWbId,        setTogetherWbId]        = useState(null);
+  const [usesDaySelect,       setUsesDaySelect]       = useState(false);
+  const [dayRange,            setDayRange]            = useState({ start: 1, end: 1 });
   const [togetherStudentIds,  setTogetherStudentIds]  = useState(new Set());
   const [togetherLoading,     setTogetherLoading]     = useState(false);
   const [togetherError,       setTogetherError]       = useState('');
 
   const openTogether = () => {
     if (!cls) return;
-    setTogetherWbId(cls.wordBooks?.[0]?.id ?? null);
+    const hasBooks = (cls.wordBooks?.length ?? 0) > 0;
+    setUsesDaySelect(true);        // DAY별 선택이 기본
+    setTogetherWbId(hasBooks ? cls.wordBooks[0].id : null);
+    setDayRange({ start: 1, end: 1 });
     setTogetherStudentIds(new Set((cls.students ?? []).map(s => s.id)));
     setTogetherError('');
     setShowTogether(true);
@@ -67,19 +75,25 @@ export default function ClassDetailPage() {
     setTogetherLoading(true);
     setTogetherError('');
     try {
-      let wbId = togetherWbId;
-      if (!wbId) {
-        // 단어장 없으면 기본 단어장(1825개) 자동 생성
-        const wbRes = await createWordBook({ classId: id, title: '기본 단어장', week: 1 });
-        wbId = wbRes.data.id;
-        await bulkAddWords(wbId, RECOMMENDED_WORDS.map(w => ({
+      let testRes;
+      if (usesDaySelect) {
+        // RECOMMENDED_WORDS에서 DAY 범위 단어 추출
+        const sliceStart = (dayRange.start - 1) * DAY_SIZE;
+        const sliceEnd   = dayRange.end * DAY_SIZE;
+        const dayWords   = RECOMMENDED_WORDS.slice(sliceStart, sliceEnd).map(w => ({
           english: w.english, korean: w.korean,
           example: w.example || '', pronunciation: w.pronunciation || '',
-        })));
+        }));
+        testRes = await createTestWithWords({
+          classId: id, words: dayWords, targetStudentIds: [...togetherStudentIds],
+        });
+      } else {
+        testRes = await createTest({
+          classId: id, wordBookId: togetherWbId, targetStudentIds: [...togetherStudentIds],
+        });
       }
-      const res = await createTest({ classId: id, wordBookId: wbId, targetStudentIds: [...togetherStudentIds] });
       setShowTogether(false);
-      navigate(`/teacher/test/${res.data.id}/run`, { state: { targetStudentIds: [...togetherStudentIds] } });
+      navigate(`/teacher/test/${testRes.data.id}/run`, { state: { targetStudentIds: [...togetherStudentIds] } });
     } catch {
       setTogetherError('시작 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.');
     } finally {
@@ -239,34 +253,90 @@ export default function ClassDetailPage() {
             {/* 스크롤 가능한 내용 영역 */}
             <div className="flex-1 overflow-y-auto px-6">
 
-              {/* 단어장 선택 */}
+              {/* 단어장 / DAY 선택 */}
               <div className="mb-5">
                 <p className="text-[11px] font-bold uppercase tracking-wider text-gray-300 mb-2">단어장 선택</p>
-                {cls.wordBooks?.length === 0 ? (
-                  <div className="bg-gray-50 rounded-2xl px-4 py-3">
-                    <p className="text-[13px] font-bold text-black">기본 단어장 자동 생성</p>
-                    <p className="text-[11px] text-gray-400 mt-0.5">수능·고교 필수 어휘 1,825개가 자동으로 만들어집니다</p>
-                  </div>
-                ) : (
-                  <div className="space-y-1.5">
-                    {cls.wordBooks.map(wb => (
-                      <button key={wb.id}
-                        onClick={() => setTogetherWbId(wb.id)}
-                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl border-2 text-left transition ${
-                          togetherWbId === wb.id ? 'border-black bg-black/5' : 'border-gray-100 hover:border-gray-300'
-                        }`}
-                      >
-                        <div className={`w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition ${
-                          togetherWbId === wb.id ? 'border-black bg-black' : 'border-gray-300'
-                        }`}>
-                          {togetherWbId === wb.id && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                <div className="space-y-1.5">
+
+                  {/* DAY별 선택 옵션 (항상 표시) */}
+                  <button
+                    onClick={() => { setUsesDaySelect(true); setTogetherWbId(null); }}
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl border-2 text-left transition ${
+                      usesDaySelect ? 'border-black bg-black/5' : 'border-gray-100 hover:border-gray-300'
+                    }`}
+                  >
+                    <div className={`w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition ${
+                      usesDaySelect ? 'border-black bg-black' : 'border-gray-300'
+                    }`}>
+                      {usesDaySelect && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                    </div>
+                    <div>
+                      <p className="font-bold text-[14px] text-black">기본 단어 DAY별 선택</p>
+                      <p className="text-[11px] text-gray-300 font-medium">1,825개 · DAY 범위 지정</p>
+                    </div>
+                  </button>
+
+                  {/* 기존 단어장 목록 */}
+                  {cls.wordBooks?.map(wb => (
+                    <button key={wb.id}
+                      onClick={() => { setUsesDaySelect(false); setTogetherWbId(wb.id); }}
+                      className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl border-2 text-left transition ${
+                        !usesDaySelect && togetherWbId === wb.id ? 'border-black bg-black/5' : 'border-gray-100 hover:border-gray-300'
+                      }`}
+                    >
+                      <div className={`w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition ${
+                        !usesDaySelect && togetherWbId === wb.id ? 'border-black bg-black' : 'border-gray-300'
+                      }`}>
+                        {!usesDaySelect && togetherWbId === wb.id && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                      </div>
+                      <div>
+                        <p className="font-bold text-[14px] text-black">{wb.title}</p>
+                        <p className="text-[11px] text-gray-300 font-medium">{wb.week}주차</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+
+                {/* DAY 범위 선택 UI */}
+                {usesDaySelect && (
+                  <div className="mt-3 bg-gray-50 rounded-2xl px-4 py-3">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-3">DAY 범위</p>
+                    <div className="flex items-center gap-3">
+                      {/* 시작 DAY */}
+                      <div className="flex-1">
+                        <p className="text-[10px] text-gray-300 text-center mb-1.5">시작</p>
+                        <div className="flex items-center border border-gray-200 bg-white rounded-xl overflow-hidden">
+                          <button
+                            onClick={() => setDayRange(r => ({ ...r, start: Math.max(1, r.start - 1) }))}
+                            className="px-3 py-2.5 text-gray-400 hover:text-black font-bold text-lg transition"
+                          >−</button>
+                          <span className="flex-1 text-center font-black text-[13px]">DAY {dayRange.start}</span>
+                          <button
+                            onClick={() => setDayRange(r => ({ ...r, start: Math.min(r.end, r.start + 1) }))}
+                            className="px-3 py-2.5 text-gray-400 hover:text-black font-bold text-lg transition"
+                          >+</button>
                         </div>
-                        <div>
-                          <p className="font-bold text-[14px] text-black">{wb.title}</p>
-                          <p className="text-[11px] text-gray-300 font-medium">{wb.week}주차</p>
+                      </div>
+                      <span className="text-gray-300 font-bold text-lg mt-5">~</span>
+                      {/* 끝 DAY */}
+                      <div className="flex-1">
+                        <p className="text-[10px] text-gray-300 text-center mb-1.5">끝</p>
+                        <div className="flex items-center border border-gray-200 bg-white rounded-xl overflow-hidden">
+                          <button
+                            onClick={() => setDayRange(r => ({ ...r, end: Math.max(r.start, r.end - 1) }))}
+                            className="px-3 py-2.5 text-gray-400 hover:text-black font-bold text-lg transition"
+                          >−</button>
+                          <span className="flex-1 text-center font-black text-[13px]">DAY {dayRange.end}</span>
+                          <button
+                            onClick={() => setDayRange(r => ({ ...r, end: Math.min(TOTAL_DAYS, r.end + 1) }))}
+                            className="px-3 py-2.5 text-gray-400 hover:text-black font-bold text-lg transition"
+                          >+</button>
                         </div>
-                      </button>
-                    ))}
+                      </div>
+                    </div>
+                    <p className="text-[11px] text-gray-400 text-center mt-2.5 font-medium">
+                      DAY {dayRange.start}{dayRange.end > dayRange.start ? `~${dayRange.end}` : ''} · {Math.min((dayRange.end - dayRange.start + 1) * DAY_SIZE, RECOMMENDED_WORDS.length - (dayRange.start - 1) * DAY_SIZE)}개 단어
+                    </p>
                   </div>
                 )}
               </div>
@@ -333,14 +403,9 @@ export default function ClassDetailPage() {
               {togetherError && (
                 <p className="text-[12px] font-medium text-black text-center mb-2">{togetherError}</p>
               )}
-              {!togetherWbId && !togetherError && (
-                <p className="text-[11px] text-gray-400 text-center mb-2">
-                  기본 단어장(1,825개)이 자동으로 생성됩니다
-                </p>
-              )}
               <button
                 onClick={handleStartTogether}
-                disabled={togetherLoading || togetherStudentIds.size === 0}
+                disabled={togetherLoading || togetherStudentIds.size === 0 || (!usesDaySelect && !togetherWbId)}
                 className="w-full bg-black text-white font-bold py-4 rounded-full text-[15px] tracking-tight active:scale-[0.97] transition disabled:opacity-40"
               >
                 {togetherLoading ? '시작 중...' : '시작하기 →'}
