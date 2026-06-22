@@ -114,7 +114,18 @@ async function forgotPassword(req, res, next) {
       data: { resetToken: token, resetTokenExpiry: expiry },
     });
 
-    const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${token}`;
+    // FRONTEND_URL은 콤마로 여러 도메인이 들어올 수 있으므로 999 도메인 우선, 없으면 첫 항목 사용
+    const frontendBases = (process.env.FRONTEND_URL || 'https://wordday999.netlify.app')
+      .split(',').map(s => s.trim().replace(/\/$/, '')).filter(Boolean);
+    const frontendBase = frontendBases.find(u => u.includes('999')) || frontendBases[0];
+    const resetUrl = `${frontendBase}/reset-password?token=${token}`;
+
+    // 이메일(Resend) 미설정 시 폴백: 재설정 링크를 응답에 직접 반환
+    // TODO: Resend 설정 후 이 분기 제거 (링크가 응답에 노출되지 않도록)
+    if (!process.env.RESEND_API_KEY) {
+      return res.json({ message: '재설정 링크가 생성되었습니다.', resetUrl });
+    }
+
     const resend = new Resend(process.env.RESEND_API_KEY);
     const from = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
 

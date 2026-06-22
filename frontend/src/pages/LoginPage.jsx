@@ -119,6 +119,11 @@ export default function LoginPage() {
               돌아가기
             </button>
           </div>
+          {loading && (
+            <p className="text-[12px] text-gray-400 text-center font-medium pt-1 leading-relaxed">
+              처음 접속 시 서버가 켜지는 데 최대 1분 정도 걸릴 수 있어요.<br />잠시만 기다려 주세요.
+            </p>
+          )}
         </form>
       ) : (
       /* 일반 로그인 폼 */
@@ -158,6 +163,11 @@ export default function LoginPage() {
             </button>
           )}
         </div>
+        {loading && (
+          <p className="text-[12px] text-gray-400 text-center font-medium pt-1 leading-relaxed">
+            처음 접속 시 서버가 켜지는 데 최대 1분 정도 걸릴 수 있어요.<br />잠시만 기다려 주세요.
+          </p>
+        )}
       </form>
       )}
 
