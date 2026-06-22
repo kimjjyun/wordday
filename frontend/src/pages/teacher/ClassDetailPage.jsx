@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { getClass, bulkCreateStudents, deleteStudent, updateStudent } from '../../api/classes';
 import { createWordBook, bulkAddWords } from '../../api/wordbooks';
 import { createTest, createTestWithWords, getClassTestHistory } from '../../api/tests';
-import { RECOMMENDED_WORDS } from '../../data/recommendedWords';
+import { RECOMMENDED_WORDS, WORDS_PER_DAY } from '../../data/recommendedWords';
 import Layout from '../../components/Layout';
 
 function downloadStudentTemplate() {
@@ -48,8 +48,8 @@ export default function ClassDetailPage() {
   const [actionLoading, setActionLoading] = useState(false);
 
   // 함께하기 모달
-  const DAY_SIZE   = 25;
-  const TOTAL_DAYS = Math.ceil(RECOMMENDED_WORDS.length / DAY_SIZE); // 73
+  const DAY_SIZE   = WORDS_PER_DAY; // 하루 20개 (앱 전체 공통 기준)
+  const TOTAL_DAYS = Math.ceil(RECOMMENDED_WORDS.length / DAY_SIZE);
 
   const [showTogether,        setShowTogether]        = useState(false);
   const [togetherStep,        setTogetherStep]        = useState(1); // 1=학생선택, 2=DAY선택
@@ -342,7 +342,7 @@ export default function ClassDetailPage() {
                       </div>
                       <div>
                         <p className="font-bold text-[14px] text-black">기본 단어 DAY별 선택</p>
-                        <p className="text-[11px] text-gray-300 font-medium">1,825개 · 총 {TOTAL_DAYS}일</p>
+                        <p className="text-[11px] text-gray-300 font-medium">{RECOMMENDED_WORDS.length.toLocaleString()}개 · 총 {TOTAL_DAYS}일</p>
                       </div>
                     </button>
                     {cls.wordBooks?.map(wb => (
