@@ -168,26 +168,6 @@ async function verifySecurityAnswer(req, res, next) {
   }
 }
 
-// [임시] 진단용 테스트 계정 정리 — 호출 후 제거 예정
-async function cleanupTestAccounts(req, res, next) {
-  try {
-    if (req.query.secret !== 'wd-cleanup-7Kq9x2') {
-      return res.status(403).json({ error: 'forbidden' });
-    }
-    const result = await prisma.teacher.deleteMany({
-      where: {
-        OR: [
-          { email: { startsWith: 'diagtest_' } },
-          { email: { startsWith: 'sqtest_' } },
-        ],
-      },
-    });
-    res.json({ deleted: result.count });
-  } catch (err) {
-    next(err);
-  }
-}
-
 // 로그인한 교사가 보안 질문 설정/변경
 async function setSecurityQuestion(req, res, next) {
   try {
@@ -250,4 +230,4 @@ async function changeStudentPassword(req, res, next) {
   }
 }
 
-module.exports = { teacherRegister, teacherLogin, studentLogin, forgotPassword, verifySecurityAnswer, setSecurityQuestion, resetPassword, changeStudentPassword, cleanupTestAccounts };
+module.exports = { teacherRegister, teacherLogin, studentLogin, forgotPassword, verifySecurityAnswer, setSecurityQuestion, resetPassword, changeStudentPassword };
