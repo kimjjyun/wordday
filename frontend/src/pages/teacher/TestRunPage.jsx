@@ -120,6 +120,10 @@ export default function TestRunPage() {
             </div>
 
             <Button variant="danger" onClick={handleFinish}>테스트 종료 및 결과 보기</Button>
+            <button
+              onClick={() => navigate(-1)}
+              className="w-full border border-gray-200 text-gray-500 font-bold py-3.5 rounded-full text-[14px] tracking-tight hover:border-gray-400 hover:text-black transition active:scale-[0.97]"
+            >나가기 (테스트는 계속 진행)</button>
           </>
         )}
       </div>
