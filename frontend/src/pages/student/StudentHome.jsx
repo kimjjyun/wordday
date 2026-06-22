@@ -63,7 +63,8 @@ export default function StudentHome() {
     const socket = io(import.meta.env.VITE_SOCKET_URL);
     socketRef.current = socket;
     socket.emit('student:subscribe_class', { classId: user.classId });
-    socket.on('class:test_invite', ({ testId, roomCode }) => {
+    socket.on('class:test_invite', ({ testId, roomCode, targetStudentIds }) => {
+      if (targetStudentIds?.length > 0 && !targetStudentIds.includes(user.id)) return;
       setInvite({ testId, roomCode });
     });
     return () => socket.disconnect();

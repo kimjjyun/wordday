@@ -73,7 +73,7 @@ async function createTestWithWords(req, res, next) {
 
 async function createTest(req, res, next) {
   try {
-    const { classId, wordBookId } = req.body;
+    const { classId, wordBookId, targetStudentIds } = req.body;
     if (!classId || !wordBookId) {
       return res.status(400).json({ error: 'classId와 wordBookId는 필수입니다.' });
     }
@@ -91,7 +91,7 @@ async function createTest(req, res, next) {
     }
 
     const test = await prisma.test.create({
-      data: { classId, wordBookId, roomCode },
+      data: { classId, wordBookId, roomCode, targetStudentIds: targetStudentIds ?? [] },
       select: { id: true, roomCode: true, status: true, createdAt: true },
     });
     res.status(201).json(test);

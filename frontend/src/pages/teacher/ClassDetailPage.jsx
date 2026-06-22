@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getClass, bulkCreateStudents, deleteStudent, updateStudent } from '../../api/classes';
 import { createWordBook, bulkAddWords } from '../../api/wordbooks';
-import { getClassTestHistory } from '../../api/tests';
+import { createTest, getClassTestHistory } from '../../api/tests';
 import { RECOMMENDED_WORDS } from '../../data/recommendedWords';
 import Layout from '../../components/Layout';
 
@@ -46,6 +46,31 @@ export default function ClassDetailPage() {
   const [editLoading,  setEditLoading]  = useState(false);
   const [editMsg,      setEditMsg]      = useState('');
   const [actionLoading, setActionLoading] = useState(false);
+
+  // 함께하기 모달
+  const [showTogether,        setShowTogether]        = useState(false);
+  const [togetherWbId,        setTogetherWbId]        = useState(null);
+  const [togetherStudentIds,  setTogetherStudentIds]  = useState(new Set());
+  const [togetherLoading,     setTogetherLoading]     = useState(false);
+
+  const openTogether = () => {
+    if (!cls) return;
+    setTogetherWbId(cls.wordBooks?.[0]?.id ?? null);
+    setTogetherStudentIds(new Set((cls.students ?? []).map(s => s.id)));
+    setShowTogether(true);
+  };
+
+  const handleStartTogether = async () => {
+    if (!togetherWbId) return;
+    setTogetherLoading(true);
+    try {
+      const res = await createTest({ classId: id, wordBookId: togetherWbId, targetStudentIds: [...togetherStudentIds] });
+      setShowTogether(false);
+      navigate(`/teacher/test/${res.data.id}/run`, { state: { targetStudentIds: [...togetherStudentIds] } });
+    } finally {
+      setTogetherLoading(false);
+    }
+  };
 
   const load = () => getClass(id).then(r => setCls(r.data)).finally(() => setLoading(false));
   useEffect(() => { load(); }, [id]);
@@ -179,6 +204,115 @@ export default function ClassDetailPage() {
 
   return (
     <Layout title="WORDDAY" back>
+
+      {/* ── 함께하기 바텀시트 모달 ── */}
+      {showTogether && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50"
+          onClick={() => !togetherLoading && setShowTogether(false)}>
+          <div className="bg-white w-full max-w-lg rounded-t-[28px] px-6 pt-6 pb-10 animate-slide-up max-h-[85vh] overflow-y-auto"
+            onClick={e => e.stopPropagation()}>
+            <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-6" />
+            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-gray-300 mb-1">Together</p>
+            <h2 className="text-2xl font-black tracking-tighter mb-5">함께하기 시작</h2>
+
+            {/* 단어장 선택 */}
+            <div className="mb-5">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-gray-300 mb-2">단어장 선택</p>
+              {cls.wordBooks?.length === 0 ? (
+                <p className="text-[13px] text-gray-300 py-2">단어장이 없습니다. 먼저 단어장을 만들어주세요.</p>
+              ) : (
+                <div className="space-y-1.5">
+                  {cls.wordBooks.map(wb => (
+                    <button key={wb.id}
+                      onClick={() => setTogetherWbId(wb.id)}
+                      className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl border-2 text-left transition ${
+                        togetherWbId === wb.id ? 'border-black bg-black/5' : 'border-gray-100 hover:border-gray-300'
+                      }`}
+                    >
+                      <div className={`w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition ${
+                        togetherWbId === wb.id ? 'border-black bg-black' : 'border-gray-300'
+                      }`}>
+                        {togetherWbId === wb.id && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                      </div>
+                      <div>
+                        <p className="font-bold text-[14px] text-black">{wb.title}</p>
+                        <p className="text-[11px] text-gray-300 font-medium">{wb.week}주차</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* 학생 선택 */}
+            <div className="mb-6">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-[11px] font-bold uppercase tracking-wider text-gray-300">학생 선택</p>
+                <div className="flex gap-1.5">
+                  <button
+                    onClick={() => setTogetherStudentIds(new Set((cls.students ?? []).map(s => s.id)))}
+                    className="text-[11px] font-bold text-black border border-gray-200 rounded-full px-2.5 py-1 hover:border-gray-400 transition"
+                  >전체</button>
+                  <button
+                    onClick={() => setTogetherStudentIds(new Set())}
+                    className="text-[11px] font-bold text-gray-400 border border-gray-200 rounded-full px-2.5 py-1 hover:border-gray-400 transition"
+                  >해제</button>
+                </div>
+              </div>
+              {cls.students?.length === 0 ? (
+                <p className="text-[13px] text-gray-300 py-2">등록된 학생이 없습니다.</p>
+              ) : (
+                <div className="border border-gray-100 rounded-2xl overflow-hidden">
+                  {[...(cls.students)].sort((a, b) =>
+                    (parseInt(a.studentCode) || 0) - (parseInt(b.studentCode) || 0) || a.studentCode.localeCompare(b.studentCode)
+                  ).map((s, i, arr) => {
+                    const checked = togetherStudentIds.has(s.id);
+                    return (
+                      <div key={s.id}>
+                        <button
+                          onClick={() => setTogetherStudentIds(prev => {
+                            const next = new Set(prev);
+                            checked ? next.delete(s.id) : next.add(s.id);
+                            return next;
+                          })}
+                          className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-gray-50 transition"
+                        >
+                          <div className={`w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition ${
+                            checked ? 'bg-black border-black' : 'border-gray-200'
+                          }`}>
+                            {checked && (
+                              <svg width="8" height="6" viewBox="0 0 8 6" fill="none">
+                                <path d="M1 3L3 5L7 1" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                              </svg>
+                            )}
+                          </div>
+                          <span className="font-bold text-[14px] text-black flex-1">{s.name}</span>
+                          <span className="text-[12px] text-gray-300 font-medium">{s.studentCode}</span>
+                        </button>
+                        {i < arr.length - 1 && <div className="h-px bg-gray-50" />}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+              {cls.students?.length > 0 && (
+                <p className="text-[11px] text-gray-300 font-medium text-center mt-2">
+                  {togetherStudentIds.size}명 선택됨
+                </p>
+              )}
+            </div>
+
+            <button
+              onClick={handleStartTogether}
+              disabled={togetherLoading || !togetherWbId || togetherStudentIds.size === 0}
+              className="w-full bg-black text-white font-bold py-4 rounded-full text-[15px] tracking-tight active:scale-[0.97] transition disabled:opacity-40"
+            >
+              {togetherLoading ? '시작 중...' : `시작하기 →`}
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="pb-8">
 
         {/* 학급 이름 + 코드 */}
@@ -193,6 +327,18 @@ export default function ClassDetailPage() {
             >복사</button>
           </div>
         </div>
+
+        {/* 함께하기 시작 버튼 */}
+        <button
+          onClick={openTogether}
+          className="w-full flex items-center justify-between bg-black text-white rounded-2xl px-5 py-4 mb-6 active:scale-[0.98] transition"
+        >
+          <div className="text-left">
+            <p className="font-black text-[16px] tracking-tight">함께하기 시작</p>
+            <p className="text-[11px] text-white/50 font-medium mt-0.5">단어장·학생 선택 후 즉시 초대</p>
+          </div>
+          <span className="text-2xl">→</span>
+        </button>
 
         <div className="h-px bg-gray-100 mb-6" />
 

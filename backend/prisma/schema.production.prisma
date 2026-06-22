@@ -88,16 +88,17 @@ model StudyRecord {
 }
 
 model Test {
-  id         String       @id @default(cuid())
-  class      Class        @relation(fields: [classId], references: [id])
-  classId    String
-  wordBook   WordBook     @relation(fields: [wordBookId], references: [id])
-  wordBookId String
-  status     String       @default("waiting")
-  roomCode   String       @unique
-  results    TestResult[]
-  createdAt  DateTime     @default(now())
-  finishedAt DateTime?
+  id               String       @id @default(cuid())
+  class            Class        @relation(fields: [classId], references: [id])
+  classId          String
+  wordBook         WordBook     @relation(fields: [wordBookId], references: [id])
+  wordBookId       String
+  status           String       @default("waiting")
+  roomCode         String       @unique
+  targetStudentIds String[]     @default([])
+  results          TestResult[]
+  createdAt        DateTime     @default(now())
+  finishedAt       DateTime?
 }
 
 model TestResult {

@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { io } from 'socket.io-client';
 import { startTest, finishTest } from '../../api/tests';
 import Layout from '../../components/Layout';
@@ -28,12 +28,14 @@ function CopyableCode({ code }) {
 export default function TestRunPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const [status, setStatus] = useState('waiting');
   const [roomCode, setRoomCode] = useState('');
   const [studentCount, setStudentCount] = useState(0);
   const [submittedCount, setSubmittedCount] = useState(0);
   const [words, setWords] = useState([]);
   const socketRef = useRef(null);
+  const targetStudentIds = location.state?.targetStudentIds ?? [];
 
   useEffect(() => {
     const socket = io(import.meta.env.VITE_SOCKET_URL);
@@ -42,8 +44,7 @@ export default function TestRunPage() {
     socket.emit('teacher:create_room', { testId: id });
     socket.on('room:created', ({ roomCode: rc, classId }) => {
       setRoomCode(rc);
-      // 학급 전체에 초대 자동 발송
-      socket.emit('teacher:invite_class', { classId, testId: id, roomCode: rc });
+      socket.emit('teacher:invite_class', { classId, testId: id, roomCode: rc, targetStudentIds });
     });
     socket.on('room:student_joined', ({ count }) => setStudentCount(count));
     socket.on('room:submission_update', ({ submittedCount: sc }) => setSubmittedCount(sc));

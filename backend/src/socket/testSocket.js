@@ -18,9 +18,9 @@ module.exports = function registerTestSocket(io) {
       }
     });
 
-    // 교사: 학급 전체에 테스트 초대 브로드캐스트
-    socket.on('teacher:invite_class', ({ classId, testId, roomCode }) => {
-      socket.to(`class:${classId}`).emit('class:test_invite', { testId, roomCode });
+    // 교사: 학급 전체에 테스트 초대 브로드캐스트 (targetStudentIds가 있으면 학생 측에서 필터링)
+    socket.on('teacher:invite_class', ({ classId, testId, roomCode, targetStudentIds }) => {
+      socket.to(`class:${classId}`).emit('class:test_invite', { testId, roomCode, targetStudentIds: targetStudentIds ?? [] });
     });
 
     // 학생: 학급 채널 구독 (홈 화면에서 초대 수신용)
@@ -34,6 +34,9 @@ module.exports = function registerTestSocket(io) {
         const test = await prisma.test.findUnique({ where: { roomCode } });
         if (!test || test.status !== 'waiting') {
           return socket.emit('error', { message: '입장할 수 없는 방입니다.' });
+        }
+        if (test.targetStudentIds.length > 0 && !test.targetStudentIds.includes(studentId)) {
+          return socket.emit('error', { message: '이 테스트에 초대된 학생이 아닙니다.' });
         }
         socket.join(roomCode);
         const student = await prisma.student.findUnique({ where: { id: studentId } });
