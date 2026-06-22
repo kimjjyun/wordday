@@ -25,7 +25,13 @@ export default function LoginPage() {
     e.preventDefault();
     setError(''); setLoading(true);
     try {
-      await forgotPassword({ email: forgotEmail });
+      const res = await forgotPassword({ email: forgotEmail });
+      // 이메일 발송 미설정 환경: 서버가 재설정 링크를 직접 내려주므로 바로 재설정 화면으로 이동
+      if (res.data?.resetUrl) {
+        const url = new URL(res.data.resetUrl);
+        navigate(url.pathname + url.search);
+        return;
+      }
       setSuccess('이메일을 확인하세요. 링크는 1시간 동안 유효합니다.');
       setForgotEmail('');
     } catch {
