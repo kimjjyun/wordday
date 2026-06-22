@@ -1,6 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { io } from 'socket.io-client';
 import { getTodayWords, getStats } from '../../api/study';
+import { useAuthStore } from '../../store/authStore';
 import Layout from '../../components/Layout';
 
 const DAYS_EN = ['SUNDAY','MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY','SATURDAY'];
@@ -35,10 +37,14 @@ function WordRow({ word, index: i }) {
 export default function StudentHome() {
   const navigate  = useNavigate();
   const location  = useLocation();
-  const [words,   setWords]   = useState([]);
-  const [stats,   setStats]   = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [showAll, setShowAll] = useState(false);
+  const { user }  = useAuthStore();
+  const socketRef = useRef(null);
+
+  const [words,      setWords]      = useState([]);
+  const [stats,      setStats]      = useState(null);
+  const [loading,    setLoading]    = useState(true);
+  const [showAll,    setShowAll]    = useState(false);
+  const [invite,     setInvite]     = useState(null); // { testId, roomCode }
 
   const now     = new Date();
   const dayEn   = DAYS_EN[now.getDay()];
@@ -51,11 +57,58 @@ export default function StudentHome() {
       .finally(() => setLoading(false));
   }, [location.key]);
 
+  // 학급 채널 구독 — 선생님 테스트 초대 수신
+  useEffect(() => {
+    if (!user?.classId) return;
+    const socket = io(import.meta.env.VITE_SOCKET_URL);
+    socketRef.current = socket;
+    socket.emit('student:subscribe_class', { classId: user.classId });
+    socket.on('class:test_invite', ({ testId, roomCode }) => {
+      setInvite({ testId, roomCode });
+    });
+    return () => socket.disconnect();
+  }, [user?.classId]);
+
   const remaining = Math.max(0, words.length - PREVIEW);
   const allDone   = !loading && stats && stats.due === 0 && stats.totalWords > 0;
 
   return (
     <Layout title="WORDDAY">
+
+      {/* 테스트 초대 모달 */}
+      {invite && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50"
+          onClick={() => setInvite(null)}>
+          <div className="bg-white w-full max-w-lg rounded-t-[28px] px-6 pt-6 pb-10 animate-slide-up"
+            onClick={e => e.stopPropagation()}>
+            <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-6" />
+            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-gray-300 mb-2">Together</p>
+            <h2 className="text-2xl font-black tracking-tighter mb-1">함께하기 초대</h2>
+            <p className="text-[14px] text-gray-400 font-medium mb-8">
+              선생님이 조회 테스트를 시작했어요.<br />지금 참여하시겠어요?
+            </p>
+            <div className="space-y-2.5">
+              <button
+                onClick={() => {
+                  const rc = invite.roomCode;
+                  setInvite(null);
+                  navigate('/student/test/wait', { state: { autoJoin: true, roomCode: rc } });
+                }}
+                className="w-full bg-black text-white font-bold py-4 rounded-full text-[15px] tracking-tight active:scale-[0.97] transition"
+              >
+                참여하기
+              </button>
+              <button
+                onClick={() => setInvite(null)}
+                className="w-full border border-gray-200 text-gray-400 font-bold py-4 rounded-full text-[15px] tracking-tight active:scale-[0.97] transition hover:border-gray-400 hover:text-black"
+              >
+                나중에
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="pb-8">
 
         {/* 날짜 헤더 */}

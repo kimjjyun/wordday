@@ -1,13 +1,14 @@
-import { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { io } from 'socket.io-client';
 import { useAuthStore } from '../../store/authStore';
 import Layout from '../../components/Layout';
 import { setTestSocket, clearTestSocket } from '../../lib/testSocketStore';
 
 export default function TestWaitingPage() {
-  const navigate = useNavigate();
-  const { user } = useAuthStore();
+  const navigate  = useNavigate();
+  const location  = useLocation();
+  const { user }  = useAuthStore();
   const socketRef = useRef(null);
   const testRef   = useRef(null);
 
@@ -25,14 +26,13 @@ export default function TestWaitingPage() {
     };
   }, []);
 
-  const handleJoin = () => {
-    const roomCode = code.trim().toUpperCase();
+  const doJoin = useCallback((roomCode) => {
     if (roomCode.length !== 4) { setError('방 코드는 4자리입니다.'); return; }
     setError('');
 
     const socket = io(import.meta.env.VITE_SOCKET_URL);
     socketRef.current = socket;
-    setTestSocket(socket);  // 모듈에 보관
+    setTestSocket(socket);
 
     socket.emit('student:join', { roomCode, studentId: user.id });
 
@@ -44,7 +44,7 @@ export default function TestWaitingPage() {
     socket.on('test:started', ({ words }) => {
       sessionStorage.setItem('test_words', JSON.stringify(words));
       sessionStorage.setItem('test_id',    testRef.current?.testId);
-      testRef.current = { ...testRef.current, navigating: true }; // disconnect 방지
+      testRef.current = { ...testRef.current, navigating: true };
       navigate('/student/test/active');
     });
 
@@ -54,7 +54,16 @@ export default function TestWaitingPage() {
       clearTestSocket();
       socketRef.current = null;
     });
-  };
+  }, [user?.id, navigate]);
+
+  // 초대 모달에서 자동 입장
+  useEffect(() => {
+    if (location.state?.autoJoin && location.state?.roomCode) {
+      doJoin(location.state.roomCode);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleJoin = () => doJoin(code.trim().toUpperCase());
 
   return (
     <Layout title="WORDDAY" back>

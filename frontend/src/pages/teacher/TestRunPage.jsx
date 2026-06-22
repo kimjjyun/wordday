@@ -40,7 +40,11 @@ export default function TestRunPage() {
     socketRef.current = socket;
 
     socket.emit('teacher:create_room', { testId: id });
-    socket.on('room:created', ({ roomCode: rc }) => setRoomCode(rc));
+    socket.on('room:created', ({ roomCode: rc, classId }) => {
+      setRoomCode(rc);
+      // 학급 전체에 초대 자동 발송
+      socket.emit('teacher:invite_class', { classId, testId: id, roomCode: rc });
+    });
     socket.on('room:student_joined', ({ count }) => setStudentCount(count));
     socket.on('room:submission_update', ({ submittedCount: sc }) => setSubmittedCount(sc));
     socket.on('test:started', ({ words: w }) => setWords(w));

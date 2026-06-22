@@ -12,10 +12,20 @@ module.exports = function registerTestSocket(io) {
         const test = await prisma.test.findUnique({ where: { id: testId } });
         if (!test) return socket.emit('error', { message: '테스트를 찾을 수 없습니다.' });
         socket.join(test.roomCode);
-        socket.emit('room:created', { roomCode: test.roomCode });
+        socket.emit('room:created', { roomCode: test.roomCode, classId: test.classId });
       } catch (err) {
         socket.emit('error', { message: '방 생성 실패' });
       }
+    });
+
+    // 교사: 학급 전체에 테스트 초대 브로드캐스트
+    socket.on('teacher:invite_class', ({ classId, testId, roomCode }) => {
+      socket.to(`class:${classId}`).emit('class:test_invite', { testId, roomCode });
+    });
+
+    // 학생: 학급 채널 구독 (홈 화면에서 초대 수신용)
+    socket.on('student:subscribe_class', ({ classId }) => {
+      socket.join(`class:${classId}`);
     });
 
     // 학생: 방 입장
