@@ -70,7 +70,11 @@ export default function ClassDetailPage() {
     const file = e.target.files[0]; if (!file) return;
     setCsvError(''); setCsvResult(null); setCsvLoading(true);
     try {
-      const text = await file.text();
+      const buffer = await file.arrayBuffer();
+      const bytes = new Uint8Array(buffer);
+      // UTF-8 BOM(EF BB BF)이 있으면 UTF-8, 없으면 한국어 Excel 기본값인 EUC-KR로 읽기
+      const hasUtf8Bom = bytes[0] === 0xEF && bytes[1] === 0xBB && bytes[2] === 0xBF;
+      const text = new TextDecoder(hasUtf8Bom ? 'utf-8' : 'euc-kr').decode(buffer).replace(/^﻿/, '');
       const lines = text.trim().split('\n');
       const headerLine = lines[0].toLowerCase().replace(/\s/g, '');
       const dataLines = (headerLine.includes('이름') || headerLine.includes('name')) ? lines.slice(1) : lines;

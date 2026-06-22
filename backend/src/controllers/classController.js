@@ -79,20 +79,27 @@ async function bulkCreateStudents(req, res, next) {
     const errors = [];
     const created = [];
 
-    for (const s of students) {
-      if (!s.name || !s.studentCode) {
-        errors.push({ studentCode: s.studentCode, reason: '이름 또는 학번 누락' });
-        continue;
-      }
-      try {
-        const hashed = await bcrypt.hash(s.password || '1234', 10);
-        const student = await prisma.student.create({
-          data: { name: s.name, studentCode: String(s.studentCode), password: hashed, classId: cls.id },
-        });
-        created.push(student);
-      } catch (e) {
-        errors.push({ studentCode: s.studentCode, reason: '이미 등록된 학번' });
-      }
+    // 병렬 처리로 속도 개선 (순차 처리 시 bcrypt 해시가 학생 수만큼 직렬 실행됨)
+    const results = await Promise.all(
+      students.map(async (s) => {
+        if (!s.name || !s.studentCode) {
+          return { error: { studentCode: s.studentCode, reason: '이름 또는 학번 누락' } };
+        }
+        try {
+          const hashed = await bcrypt.hash(s.password || '1234', 10);
+          const student = await prisma.student.create({
+            data: { name: s.name, studentCode: String(s.studentCode), password: hashed, classId: cls.id },
+          });
+          return { student };
+        } catch (e) {
+          return { error: { studentCode: s.studentCode, reason: '이미 등록된 학번' } };
+        }
+      })
+    );
+
+    for (const r of results) {
+      if (r.error) errors.push(r.error);
+      else created.push(r.student);
     }
 
     res.status(201).json({ created: created.length, errors });
