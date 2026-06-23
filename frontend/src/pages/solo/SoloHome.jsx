@@ -1,7 +1,8 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGuestStore } from '../../store/guestStore';
 import { CATEGORIES, RECOMMENDED_WORDS, TOTAL_DAYS } from '../../data/recommendedWords';
+import { trackVisit } from '../../api/stats';
 
 const DAYS_EN = ['SUNDAY','MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY','SATURDAY'];
 const MONTHS  = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -17,6 +18,9 @@ export default function SoloHome() {
   const now    = new Date();
   const dayEn  = DAYS_EN[now.getDay()];
   const dateStr = `${now.getDate()} ${MONTHS[now.getMonth()]} ${now.getFullYear()}`;
+
+  // 로그인 없는 사용 집계 (익명, 하루 1회)
+  useEffect(() => { trackVisit('guest'); }, []);
 
   const filteredWords = useMemo(() => RECOMMENDED_WORDS.filter(w => {
     if (catFilter !== 'all' && w.category !== catFilter) return false;

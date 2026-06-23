@@ -101,6 +101,16 @@ model Test {
   finishedAt       DateTime?
 }
 
+model Visit {
+  id        String   @id @default(cuid())
+  visitorId String   // 클라이언트가 생성한 익명 ID (개인정보 아님)
+  date      String   // 집계 단위 날짜 YYYY-MM-DD (KST)
+  kind      String   @default("guest") // guest | student | teacher
+  createdAt DateTime @default(now())
+
+  @@unique([visitorId, date, kind])
+}
+
 model TestResult {
   id          String   @id @default(cuid())
   test        Test     @relation(fields: [testId], references: [id])

@@ -10,6 +10,7 @@ const classRoutes = require('./routes/classes');
 const wordbookRoutes = require('./routes/wordbooks');
 const studyRoutes = require('./routes/study');
 const testRoutes = require('./routes/tests');
+const statsRoutes = require('./routes/stats');
 const errorHandler = require('./middleware/errorHandler');
 const registerTestSocket = require('./socket/testSocket');
 
@@ -58,6 +59,7 @@ app.use('/api/classes', classRoutes);
 app.use('/api/wordbooks', wordbookRoutes);
 app.use('/api/study', studyRoutes);
 app.use('/api/tests', testRoutes);
+app.use('/api/stats', statsRoutes);
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 
