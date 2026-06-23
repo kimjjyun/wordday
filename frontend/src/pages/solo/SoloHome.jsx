@@ -143,6 +143,27 @@ export default function SoloHome() {
         )}
       </div>
 
+      {/* 긴 목록 탐색 플로팅 버튼 (전체 펼침 상태에서만) */}
+      {showAll && filteredWords.length > PREVIEW && (
+        <div className="fixed bottom-5 right-5 z-40 flex flex-col gap-2">
+          <button
+            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+            className="w-11 h-11 rounded-full bg-black text-white shadow-lg flex items-center justify-center text-lg active:scale-90 transition"
+            aria-label="맨 위로"
+          >↑</button>
+          <button
+            onClick={() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })}
+            className="w-11 h-11 rounded-full bg-black text-white shadow-lg flex items-center justify-center text-lg active:scale-90 transition"
+            aria-label="맨 아래로"
+          >↓</button>
+          <button
+            onClick={() => { setShowAll(false); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+            className="w-11 h-11 rounded-full bg-white border border-gray-200 text-gray-500 shadow-lg flex items-center justify-center text-[11px] font-bold active:scale-90 transition"
+            aria-label="접기"
+          >접기</button>
+        </div>
+      )}
+
       {/* Day 선택 모달 */}
       {modal && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40"
