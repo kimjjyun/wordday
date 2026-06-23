@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getClass, bulkCreateStudents, deleteStudent, updateStudent } from '../../api/classes';
-import { createWordBook, bulkAddWords } from '../../api/wordbooks';
+import { createWordBook, bulkAddWords, deleteWordBook } from '../../api/wordbooks';
 import { createTest, createTestWithWords, getClassTestHistory } from '../../api/tests';
 import { RECOMMENDED_WORDS, WORDS_PER_DAY } from '../../data/recommendedWords';
 import Layout from '../../components/Layout';
@@ -31,6 +31,8 @@ export default function ClassDetailPage() {
   const [wbForm,       setWbForm]       = useState({ title: '', week: '' });
   const [withDefault,  setWithDefault]  = useState(true);
   const [wbLoading,    setWbLoading]    = useState(false);
+  const [confirmWbId,  setConfirmWbId]  = useState(null);
+  const [deletingWbId, setDeletingWbId] = useState(null);
   const [studentSort,  setStudentSort]  = useState('code'); // 'code' | 'name'
   const [rows,         setRows]         = useState([{ name: '', studentCode: '', password: '' }]);
   const [directMsg,    setDirectMsg]    = useState('');
@@ -127,6 +129,14 @@ export default function ClassDetailPage() {
     } finally {
       setWbLoading(false);
     }
+  };
+
+  const handleDeleteWordBook = async (wbId) => {
+    setDeletingWbId(wbId);
+    setConfirmWbId(null);
+    try { await deleteWordBook(wbId); load(); }
+    catch { /* no-op */ }
+    finally { setDeletingWbId(null); }
   };
 
   const updateRow = (i, f, v) => setRows(prev => prev.map((r, idx) => idx === i ? { ...r, [f]: v } : r));
@@ -747,16 +757,38 @@ export default function ClassDetailPage() {
             <div>
               {cls.wordBooks.map((wb, i) => (
                 <div key={wb.id}>
-                  <button
-                    className="w-full flex items-center justify-between py-4 text-left active:bg-gray-50 rounded-xl transition"
-                    onClick={() => navigate(`/teacher/wordbooks/${wb.id}`)}
-                  >
-                    <div>
-                      <p className="font-bold text-[15px] tracking-tight text-black">{wb.title}</p>
-                      <p className="text-[11px] font-bold uppercase tracking-wider text-gray-300 mt-0.5">{wb.week}주차</p>
-                    </div>
-                    <span className="text-gray-200 text-lg">›</span>
-                  </button>
+                  <div className="flex items-center gap-2 py-2">
+                    <button
+                      className="flex-1 flex items-center justify-between py-2 text-left active:bg-gray-50 rounded-xl transition min-w-0"
+                      onClick={() => navigate(`/teacher/wordbooks/${wb.id}`)}
+                    >
+                      <div className="min-w-0">
+                        <p className="font-bold text-[15px] tracking-tight text-black truncate">{wb.title}</p>
+                        <p className="text-[11px] font-bold uppercase tracking-wider text-gray-300 mt-0.5">{wb.week}주차</p>
+                      </div>
+                      <span className="text-gray-200 text-lg ml-2">›</span>
+                    </button>
+                    {confirmWbId === wb.id ? (
+                      <div className="flex items-center gap-2 shrink-0 pl-1">
+                        <button
+                          onClick={() => handleDeleteWordBook(wb.id)}
+                          disabled={deletingWbId === wb.id}
+                          className="text-[11px] font-bold text-white bg-black rounded-full px-3 py-1.5 transition disabled:opacity-40"
+                        >{deletingWbId === wb.id ? '삭제 중' : '삭제'}</button>
+                        <button
+                          onClick={() => setConfirmWbId(null)}
+                          className="text-[11px] font-bold text-gray-300 hover:text-black transition"
+                        >취소</button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setConfirmWbId(wb.id)}
+                        disabled={deletingWbId === wb.id}
+                        className="shrink-0 w-7 h-7 flex items-center justify-center text-gray-300 hover:text-black text-lg font-bold transition disabled:opacity-40"
+                        aria-label="단어장 삭제"
+                      >×</button>
+                    )}
+                  </div>
                   {i < cls.wordBooks.length - 1 && <div className="h-px bg-gray-100" />}
                 </div>
               ))}

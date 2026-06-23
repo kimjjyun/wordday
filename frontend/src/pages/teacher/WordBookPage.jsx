@@ -52,6 +52,17 @@ export default function WordBookPage() {
   const [showTestModal, setShowTestModal] = useState(false);
   const [testDayFilter, setTestDayFilter] = useState(0);
 
+  const [listSearch, setListSearch] = useState('');
+  const [visibleCount, setVisibleCount] = useState(50);
+  const [showTopBtn, setShowTopBtn] = useState(false);
+
+  useEffect(() => { setVisibleCount(50); }, [listSearch]);
+  useEffect(() => {
+    const onScroll = () => setShowTopBtn(window.scrollY > 600);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
   const load = () => getWordBook(id).then(r => setWb(r.data)).finally(() => setLoading(false));
   useEffect(() => { load(); }, [id]);
 
@@ -342,12 +353,28 @@ export default function WordBookPage() {
 
           {wb.words?.length === 0 ? (
             <p className="text-[13px] text-gray-300 font-medium py-4">단어를 추가하세요</p>
-          ) : (
+          ) : (() => {
+            const q = listSearch.trim().toLowerCase();
+            const matched = q
+              ? wb.words.filter(w => w.english.toLowerCase().includes(q) || w.korean.includes(q))
+              : wb.words;
+            const shown = matched.slice(0, visibleCount);
+            return (
             <div>
-              {wb.words.map((w, i) => (
+              {/* 검색 */}
+              <input
+                className="w-full border border-gray-200 rounded-2xl px-4 py-2.5 text-[13px] font-medium outline-none focus:border-black transition placeholder:text-gray-300 mb-2"
+                placeholder="단어 검색 (영어·뜻)..."
+                value={listSearch}
+                onChange={e => setListSearch(e.target.value)}
+              />
+              {matched.length === 0 ? (
+                <p className="text-[13px] text-gray-300 font-medium text-center py-8">검색 결과 없음</p>
+              ) : <>
+              {shown.map((w, i) => (
                 <div key={w.id}>
                   <div className="flex items-center gap-3 py-3.5">
-                    <span className="text-[11px] font-bold text-gray-200 w-5 text-right shrink-0">{i + 1}</span>
+                    <span className="text-[11px] font-bold text-gray-200 w-7 text-right shrink-0">{i + 1}</span>
                     <div className="flex-1 min-w-0 flex justify-between items-start">
                       <div>
                         <span className="font-bold text-[15px] text-black tracking-tight">{w.english}</span>
@@ -377,14 +404,33 @@ export default function WordBookPage() {
                       >×</button>
                     )}
                   </div>
-                  {i < wb.words.length - 1 && <div className="h-px bg-gray-50 ml-8" />}
+                  {i < shown.length - 1 && <div className="h-px bg-gray-50 ml-10" />}
                 </div>
               ))}
+              {matched.length > shown.length && (
+                <button
+                  onClick={() => setVisibleCount(c => c + 100)}
+                  className="w-full border border-gray-200 rounded-full py-2.5 mt-3 text-[12px] font-bold text-gray-500 hover:border-gray-400 transition"
+                >
+                  더 보기 ({shown.length} / {matched.length})
+                </button>
+              )}
+              </>}
             </div>
-          )}
+            );
+          })()}
         </div>
       </div>
     </Layout>
+
+    {/* 맨 위로 버튼 */}
+    {showTopBtn && (
+      <button
+        onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+        className="fixed bottom-6 right-6 z-40 w-12 h-12 rounded-full bg-black text-white shadow-lg flex items-center justify-center text-xl active:scale-90 transition"
+        aria-label="맨 위로"
+      >↑</button>
+    )}
 
     {/* Day 선택 모달 */}
 

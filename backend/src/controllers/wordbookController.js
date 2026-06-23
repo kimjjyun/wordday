@@ -159,6 +159,37 @@ async function bulkAddWords(req, res, next) {
   }
 }
 
+async function deleteWordBook(req, res, next) {
+  try {
+    const wb = await prisma.wordBook.findUnique({
+      where: { id: req.params.id },
+      include: { class: { select: { teacherId: true } } },
+    });
+    if (!wb) return res.status(404).json({ error: '단어장을 찾을 수 없습니다.' });
+    if (wb.class.teacherId !== req.user.sub) {
+      return res.status(403).json({ error: '권한이 없습니다.' });
+    }
+
+    // 연결된 테스트/결과 먼저 삭제 (Test → WordBook 관계에는 cascade가 없음)
+    const tests = await prisma.test.findMany({
+      where: { wordBookId: wb.id },
+      select: { id: true },
+    });
+    const testIds = tests.map(t => t.id);
+    if (testIds.length) {
+      await prisma.testResult.deleteMany({ where: { testId: { in: testIds } } });
+      await prisma.test.deleteMany({ where: { id: { in: testIds } } });
+    }
+
+    // 단어와 그에 딸린 학습 기록(StudyRecord)은 cascade 로 함께 삭제됨
+    await prisma.wordBook.delete({ where: { id: wb.id } });
+
+    res.json({ message: '단어장이 삭제되었습니다.' });
+  } catch (err) {
+    next(err);
+  }
+}
+
 async function deleteWord(req, res, next) {
   try {
     const word = await prisma.word.findFirst({
@@ -175,4 +206,4 @@ async function deleteWord(req, res, next) {
   }
 }
 
-module.exports = { createWordBook, getWordBook, getWords, addWord, bulkAddWords, importCSV, deleteWord };
+module.exports = { createWordBook, getWordBook, getWords, addWord, bulkAddWords, importCSV, deleteWord, deleteWordBook };

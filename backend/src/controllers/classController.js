@@ -57,7 +57,11 @@ async function getClass(req, res, next) {
           select: { id: true, name: true, studentCode: true, createdAt: true },
           orderBy: { studentCode: 'asc' },
         },
-        wordBooks: { select: { id: true, title: true, week: true, isActive: true } },
+        wordBooks: {
+          where: { isActive: true },
+          select: { id: true, title: true, week: true, isActive: true },
+          orderBy: { createdAt: 'asc' },
+        },
       },
     });
     if (!cls) return res.status(404).json({ error: '학급을 찾을 수 없습니다.' });

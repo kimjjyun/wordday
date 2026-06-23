@@ -22,6 +22,21 @@ async function cleanupOldTests() {
 }
 cleanupOldTests();
 
+// DAY 시험용으로 자동 생성된 임시 단어장은 교사 목록/학생 학습 풀에서 제외한다.
+// (과거에 isActive=true 로 생성돼 단어장 목록을 오염시키던 데이터를 1회 정리)
+async function deactivateThrowawayTestWordBooks() {
+  try {
+    const result = await prisma.wordBook.updateMany({
+      where: { week: 0, title: { startsWith: 'DAY 시험' }, isActive: true },
+      data: { isActive: false },
+    });
+    if (result.count) console.log(`[cleanup] 임시 시험 단어장 ${result.count}개 숨김 처리`);
+  } catch (e) {
+    console.error('[cleanup] 임시 단어장 정리 실패:', e.message);
+  }
+}
+deactivateThrowawayTestWordBooks();
+
 function generateRoomCode() {
   return Math.random().toString(36).substring(2, 6).toUpperCase();
 }
@@ -50,6 +65,7 @@ async function createTestWithWords(req, res, next) {
         classId,
         title: `DAY 시험 (${new Date().toLocaleDateString('ko-KR')})`,
         week: 0,
+        isActive: false, // 임시 시험용 단어장: 단어장 목록/학생 학습 풀에서 제외
         words: {
           create: words.map((w, i) => ({
             english: w.english,
