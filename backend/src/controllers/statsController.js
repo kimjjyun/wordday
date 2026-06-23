@@ -96,4 +96,50 @@ async function getAdminStats(req, res, next) {
   }
 }
 
-module.exports = { recordVisit, getAdminStats };
+// 운영자 전체 초기화 (비밀키 + 확인 토큰 필요). 방문 통계(Visit)는 보존.
+async function resetAll(req, res, next) {
+  try {
+    const key = req.query.key || req.headers['x-admin-key'];
+    const confirm = req.query.confirm || req.body?.confirm;
+    const expected = process.env.ADMIN_STATS_KEY;
+    if (!expected) {
+      return res.status(503).json({ error: 'ADMIN_STATS_KEY 환경변수가 설정되지 않았습니다.' });
+    }
+    if (key !== expected) {
+      return res.status(401).json({ error: '인증 실패' });
+    }
+    if (confirm !== 'RESET') {
+      return res.status(400).json({ error: "확인 토큰이 필요합니다. confirm=RESET 을 함께 보내세요." });
+    }
+
+    // FK 순서 준수 (Visit 은 건드리지 않음)
+    const before = {
+      teachers: await prisma.teacher.count(),
+      classes: await prisma.class.count(),
+      students: await prisma.student.count(),
+      tests: await prisma.test.count(),
+    };
+
+    await prisma.testResult.deleteMany({});
+    await prisma.studyRecord.deleteMany({});
+    await prisma.test.deleteMany({});
+    await prisma.word.deleteMany({});
+    await prisma.wordBook.deleteMany({});
+    await prisma.student.deleteMany({});
+    await prisma.class.deleteMany({});
+    await prisma.teacher.deleteMany({});
+
+    const after = {
+      teachers: await prisma.teacher.count(),
+      classes: await prisma.class.count(),
+      students: await prisma.student.count(),
+      tests: await prisma.test.count(),
+    };
+
+    res.json({ message: '전체 초기화 완료 (방문 통계는 유지)', before, after });
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { recordVisit, getAdminStats, resetAll };
