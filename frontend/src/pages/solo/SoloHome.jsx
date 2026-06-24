@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useGuestStore } from '../../store/guestStore';
 import { CATEGORIES, RECOMMENDED_WORDS, TOTAL_DAYS } from '../../data/recommendedWords';
 import { trackVisit } from '../../api/stats';
@@ -205,6 +205,10 @@ export default function SoloHome() {
           </div>
         </div>
       )}
+
+      <div className="pb-6 pt-2 text-center">
+        <Link to="/privacy" className="text-[11px] text-gray-200 hover:text-gray-400 transition">개인정보처리방침</Link>
+      </div>
     </div>
   );
 }

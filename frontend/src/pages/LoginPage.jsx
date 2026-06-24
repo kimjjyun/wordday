@@ -269,6 +269,7 @@ export default function LoginPage() {
         >
           로그인 없이 혼자 공부하기 →
         </Link>
+        <Link to="/privacy" className="block text-[11px] text-gray-200 hover:text-gray-400 transition">개인정보처리방침</Link>
         <p className="text-[11px] text-gray-200">WordDay © 2026</p>
       </div>
     </div>
