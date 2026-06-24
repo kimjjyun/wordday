@@ -60,7 +60,8 @@ export default function StudentHome() {
   // 학급 채널 구독 — 선생님 테스트 초대 수신
   useEffect(() => {
     if (!user?.classId) return;
-    const socket = io(import.meta.env.VITE_SOCKET_URL);
+    const { token } = useAuthStore.getState();
+    const socket = io(import.meta.env.VITE_SOCKET_URL, { auth: { token } });
     socketRef.current = socket;
     socket.emit('student:subscribe_class', { classId: user.classId });
     socket.on('class:test_invite', ({ testId, roomCode, targetStudentIds }) => {

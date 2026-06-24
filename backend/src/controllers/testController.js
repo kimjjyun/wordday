@@ -118,6 +118,14 @@ async function createTest(req, res, next) {
 
 async function startTest(req, res, next) {
   try {
+    const existing = await prisma.test.findUnique({
+      where: { id: req.params.id },
+      include: { class: { select: { teacherId: true } } },
+    });
+    if (!existing) return res.status(404).json({ error: '테스트를 찾을 수 없습니다.' });
+    if (existing.class.teacherId !== req.user.sub) {
+      return res.status(403).json({ error: '권한이 없습니다.' });
+    }
     const test = await prisma.test.update({
       where: { id: req.params.id },
       data: { status: 'active' },
@@ -131,6 +139,14 @@ async function startTest(req, res, next) {
 
 async function finishTest(req, res, next) {
   try {
+    const existing = await prisma.test.findUnique({
+      where: { id: req.params.id },
+      include: { class: { select: { teacherId: true } } },
+    });
+    if (!existing) return res.status(404).json({ error: '테스트를 찾을 수 없습니다.' });
+    if (existing.class.teacherId !== req.user.sub) {
+      return res.status(403).json({ error: '권한이 없습니다.' });
+    }
     const test = await prisma.test.update({
       where: { id: req.params.id },
       data: { status: 'finished', finishedAt: new Date() },
@@ -146,13 +162,16 @@ async function submitAnswers(req, res, next) {
   try {
     const studentId = req.user.sub;
     const testId = req.params.id;
-    const { answers } = req.body; // { wordId: "입력한 답" }
+    const { answers } = req.body;
 
     const test = await prisma.test.findUnique({
       where: { id: testId },
       include: { wordBook: { include: { words: true } } },
     });
     if (!test) return res.status(404).json({ error: '테스트를 찾을 수 없습니다.' });
+    if (test.classId !== req.user.classId) {
+      return res.status(403).json({ error: '이 테스트에 참여할 권한이 없습니다.' });
+    }
 
     let score = 0;
     test.wordBook.words.forEach(word => {
@@ -176,6 +195,15 @@ async function submitAnswers(req, res, next) {
 
 async function getResults(req, res, next) {
   try {
+    const test = await prisma.test.findUnique({
+      where: { id: req.params.id },
+      include: { class: { select: { teacherId: true } } },
+    });
+    if (!test) return res.status(404).json({ error: '테스트를 찾을 수 없습니다.' });
+    if (test.class.teacherId !== req.user.sub) {
+      return res.status(403).json({ error: '권한이 없습니다.' });
+    }
+
     const results = await prisma.testResult.findMany({
       where: { testId: req.params.id },
       include: { student: { select: { name: true, studentCode: true } } },

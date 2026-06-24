@@ -1,39 +1,67 @@
 const { PrismaClient } = require('@prisma/client');
 const { serializeAnswers } = require('../lib/db');
+const jwt = require('jsonwebtoken');
 
 const prisma = new PrismaClient();
 
 module.exports = function registerTestSocket(io) {
+  // 소켓 연결 시 JWT 검증
+  io.use((socket, next) => {
+    const token = socket.handshake.auth?.token;
+    if (!token) return next(new Error('인증 토큰이 필요합니다.'));
+    try {
+      socket.user = jwt.verify(token, process.env.JWT_SECRET);
+      next();
+    } catch {
+      next(new Error('유효하지 않은 토큰입니다.'));
+    }
+  });
+
   io.on('connection', (socket) => {
 
     // 교사: 방 생성
     socket.on('teacher:create_room', async ({ testId }) => {
+      if (socket.user.role !== 'teacher') return socket.emit('error', { message: '권한이 없습니다.' });
       try {
-        const test = await prisma.test.findUnique({ where: { id: testId } });
+        const test = await prisma.test.findUnique({
+          where: { id: testId },
+          include: { class: { select: { teacherId: true } } },
+        });
         if (!test) return socket.emit('error', { message: '테스트를 찾을 수 없습니다.' });
+        if (test.class.teacherId !== socket.user.sub) return socket.emit('error', { message: '권한이 없습니다.' });
         socket.join(test.roomCode);
         socket.emit('room:created', { roomCode: test.roomCode, classId: test.classId });
-      } catch (err) {
+      } catch {
         socket.emit('error', { message: '방 생성 실패' });
       }
     });
 
-    // 교사: 학급 전체에 테스트 초대 브로드캐스트 (targetStudentIds가 있으면 학생 측에서 필터링)
-    socket.on('teacher:invite_class', ({ classId, testId, roomCode, targetStudentIds }) => {
+    // 교사: 학급 전체에 테스트 초대 브로드캐스트
+    socket.on('teacher:invite_class', async ({ classId, testId, roomCode, targetStudentIds }) => {
+      if (socket.user.role !== 'teacher') return socket.emit('error', { message: '권한이 없습니다.' });
+      const cls = await prisma.class.findFirst({ where: { id: classId, teacherId: socket.user.sub } });
+      if (!cls) return socket.emit('error', { message: '권한이 없습니다.' });
       socket.to(`class:${classId}`).emit('class:test_invite', { testId, roomCode, targetStudentIds: targetStudentIds ?? [] });
     });
 
     // 학생: 학급 채널 구독 (홈 화면에서 초대 수신용)
     socket.on('student:subscribe_class', ({ classId }) => {
+      if (socket.user.role !== 'student') return;
+      if (socket.user.classId !== classId) return;
       socket.join(`class:${classId}`);
     });
 
-    // 학생: 방 입장
-    socket.on('student:join', async ({ roomCode, studentId }) => {
+    // 학생: 방 입장 (studentId는 JWT에서 추출)
+    socket.on('student:join', async ({ roomCode }) => {
+      if (socket.user.role !== 'student') return socket.emit('error', { message: '권한이 없습니다.' });
+      const studentId = socket.user.sub;
       try {
         const test = await prisma.test.findUnique({ where: { roomCode } });
         if (!test || test.status !== 'waiting') {
           return socket.emit('error', { message: '입장할 수 없는 방입니다.' });
+        }
+        if (test.classId !== socket.user.classId) {
+          return socket.emit('error', { message: '이 테스트에 참여할 권한이 없습니다.' });
         }
         if (test.targetStudentIds.length > 0 && !test.targetStudentIds.includes(studentId)) {
           return socket.emit('error', { message: '이 테스트에 초대된 학생이 아닙니다.' });
@@ -43,16 +71,17 @@ module.exports = function registerTestSocket(io) {
         const roomSize = io.sockets.adapter.rooms.get(roomCode)?.size ?? 0;
         io.to(roomCode).emit('room:student_joined', {
           studentName: student?.name ?? '알 수 없음',
-          count: Math.max(0, roomSize - 1), // 교사 소켓 제외
+          count: Math.max(0, roomSize - 1),
         });
         socket.emit('join:confirmed', { testId: test.id, roomCode });
-      } catch (err) {
+      } catch {
         socket.emit('error', { message: '입장 실패' });
       }
     });
 
     // 교사: 테스트 시작
     socket.on('teacher:start_test', async ({ testId }) => {
+      if (socket.user.role !== 'teacher') return socket.emit('error', { message: '권한이 없습니다.' });
       try {
         const test = await prisma.test.update({
           where: { id: testId },
@@ -60,26 +89,26 @@ module.exports = function registerTestSocket(io) {
           include: { wordBook: { include: { words: { orderBy: { order: 'asc' } } } } },
         });
 
-        const words = test.wordBook.words;
-        // 선택지 생성은 프론트(1000개 풀)에서 수행 → 백엔드는 정답만 전달
-        const wordsWithOptions = words.map(word => ({
+        const wordsWithOptions = test.wordBook.words.map(word => ({
           id: word.id, english: word.english, answer: word.korean,
         }));
-
         io.to(test.roomCode).emit('test:started', { words: wordsWithOptions });
-      } catch (err) {
+      } catch {
         socket.emit('error', { message: '테스트 시작 실패' });
       }
     });
 
-    // 학생: 답안 제출 (소켓 경유)
-    socket.on('student:submit', async ({ testId, studentId, answers }) => {
+    // 학생: 답안 제출 (studentId는 JWT에서 추출)
+    socket.on('student:submit', async ({ testId, answers }) => {
+      if (socket.user.role !== 'student') return socket.emit('error', { message: '권한이 없습니다.' });
+      const studentId = socket.user.sub;
       try {
         const test = await prisma.test.findUnique({
           where: { id: testId },
           include: { wordBook: { include: { words: true } } },
         });
         if (!test) return socket.emit('error', { message: '테스트를 찾을 수 없습니다.' });
+        if (test.classId !== socket.user.classId) return socket.emit('error', { message: '권한이 없습니다.' });
 
         let score = 0;
         let answered = 0;
@@ -98,16 +127,16 @@ module.exports = function registerTestSocket(io) {
 
         socket.emit('submit:confirmed', { score, total });
 
-        // 교사에게 실시간 제출 현황 알림
         const submittedCount = await prisma.testResult.count({ where: { testId } });
         io.to(test.roomCode).emit('room:submission_update', { submittedCount });
-      } catch (err) {
+      } catch {
         socket.emit('error', { message: '답안 제출 실패' });
       }
     });
 
     // 교사: 테스트 종료
     socket.on('teacher:end_test', async ({ testId }) => {
+      if (socket.user.role !== 'teacher') return socket.emit('error', { message: '권한이 없습니다.' });
       try {
         const test = await prisma.test.update({
           where: { id: testId },
@@ -124,7 +153,7 @@ module.exports = function registerTestSocket(io) {
           topScore,
           total: results[0]?.total ?? 0,
         });
-      } catch (err) {
+      } catch {
         socket.emit('error', { message: '테스트 종료 실패' });
       }
     });

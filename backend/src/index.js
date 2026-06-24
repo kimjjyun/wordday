@@ -4,6 +4,7 @@ const http = require('http');
 const path = require('path');
 const { Server } = require('socket.io');
 const cors = require('cors');
+const rateLimit = require('express-rate-limit');
 
 const authRoutes = require('./routes/auth');
 const classRoutes = require('./routes/classes');
@@ -42,6 +43,27 @@ const io = new Server(server, {
 
 app.use(cors({ origin: corsOrigin }));
 app.use(express.json({ limit: '5mb' }));
+
+// 전역 rate limit: 15분에 500회
+const globalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 500,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: '요청이 너무 많습니다. 잠시 후 다시 시도하세요.' },
+});
+// 로그인 전용 rate limit: 15분에 20회 (브루트포스 방지)
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: '로그인 시도가 너무 많습니다. 15분 후 다시 시도하세요.' },
+});
+
+app.use('/api', globalLimiter);
+app.use('/api/auth/teacher/login', authLimiter);
+app.use('/api/auth/student/login', authLimiter);
 
 // JSON 파싱 에러를 잡아서 서버가 죽지 않도록 처리
 app.use((err, req, res, next) => {

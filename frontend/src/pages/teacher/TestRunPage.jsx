@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { io } from 'socket.io-client';
 import { startTest, finishTest } from '../../api/tests';
+import { useAuthStore } from '../../store/authStore';
 import Layout from '../../components/Layout';
 import Button from '../../components/Button';
 
@@ -29,6 +30,7 @@ export default function TestRunPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
+  const { token } = useAuthStore();
   const [status, setStatus] = useState('waiting');
   const [roomCode, setRoomCode] = useState('');
   const [studentCount, setStudentCount] = useState(0);
@@ -38,7 +40,7 @@ export default function TestRunPage() {
   const targetStudentIds = location.state?.targetStudentIds ?? [];
 
   useEffect(() => {
-    const socket = io(import.meta.env.VITE_SOCKET_URL);
+    const socket = io(import.meta.env.VITE_SOCKET_URL, { auth: { token } });
     socketRef.current = socket;
 
     socket.emit('teacher:create_room', { testId: id });

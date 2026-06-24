@@ -1,5 +1,7 @@
 const router = require('express').Router();
 const { requireTeacher } = require('../middleware/auth');
+const validate = require('../middleware/validate');
+const { createClassSchema } = require('../lib/schemas');
 const {
   createClass,
   getClasses,
@@ -11,11 +13,11 @@ const {
 
 router.use(requireTeacher);
 
-router.post('/', createClass);
-router.get('/', getClasses);
-router.get('/:id', getClass);
-router.post('/:id/students/bulk', bulkCreateStudents);
-router.delete('/:id/students/:studentId', deleteStudent);
-router.put('/:id/students/:studentId', updateStudent);
+router.post('/',                              validate(createClassSchema), createClass);
+router.get('/',                               getClasses);
+router.get('/:id',                            getClass);
+router.post('/:id/students/bulk',             bulkCreateStudents);
+router.delete('/:id/students/:studentId',     deleteStudent);
+router.put('/:id/students/:studentId',        updateStudent);
 
 module.exports = router;

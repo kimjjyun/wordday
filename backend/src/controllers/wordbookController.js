@@ -30,10 +30,17 @@ async function getWordBook(req, res, next) {
   try {
     const wb = await prisma.wordBook.findUnique({
       where: { id: req.params.id },
-      include: { words: { orderBy: { order: 'asc' } } },
+      include: {
+        words: { orderBy: { order: 'asc' } },
+        class: { select: { teacherId: true } },
+      },
     });
     if (!wb) return res.status(404).json({ error: '단어장을 찾을 수 없습니다.' });
-    res.json(wb);
+    if (wb.class.teacherId !== req.user.sub) {
+      return res.status(403).json({ error: '권한이 없습니다.' });
+    }
+    const { class: _cls, ...wbData } = wb;
+    res.json(wbData);
   } catch (err) {
     next(err);
   }
@@ -41,6 +48,14 @@ async function getWordBook(req, res, next) {
 
 async function getWords(req, res, next) {
   try {
+    const wb = await prisma.wordBook.findUnique({
+      where: { id: req.params.id },
+      include: { class: { select: { teacherId: true } } },
+    });
+    if (!wb) return res.status(404).json({ error: '단어장을 찾을 수 없습니다.' });
+    if (wb.class.teacherId !== req.user.sub) {
+      return res.status(403).json({ error: '권한이 없습니다.' });
+    }
     const words = await prisma.word.findMany({
       where: { wordBookId: req.params.id },
       orderBy: { order: 'asc' },
@@ -53,9 +68,18 @@ async function getWords(req, res, next) {
 
 async function addWord(req, res, next) {
   try {
-    const { english, korean, example } = req.body;
+    const { english, korean, example, pronunciation } = req.body;
     if (!english || !korean) {
       return res.status(400).json({ error: '영단어와 뜻은 필수입니다.' });
+    }
+
+    const wb = await prisma.wordBook.findUnique({
+      where: { id: req.params.id },
+      include: { class: { select: { teacherId: true } } },
+    });
+    if (!wb) return res.status(404).json({ error: '단어장을 찾을 수 없습니다.' });
+    if (wb.class.teacherId !== req.user.sub) {
+      return res.status(403).json({ error: '권한이 없습니다.' });
     }
 
     const maxOrder = await prisma.word.aggregate({
@@ -64,7 +88,6 @@ async function addWord(req, res, next) {
     });
     const order = (maxOrder._max.order ?? -1) + 1;
 
-    const { pronunciation } = req.body;
     const word = await prisma.word.create({
       data: { english, korean, example: example || null, pronunciation: pronunciation || null, wordBookId: req.params.id, order },
     });
@@ -79,8 +102,14 @@ async function importCSV(req, res, next) {
     if (!req.file) return res.status(400).json({ error: 'CSV 파일을 업로드하세요.' });
 
     const wordBookId = req.params.id;
-    const wb = await prisma.wordBook.findUnique({ where: { id: wordBookId } });
+    const wb = await prisma.wordBook.findUnique({
+      where: { id: wordBookId },
+      include: { class: { select: { teacherId: true } } },
+    });
     if (!wb) return res.status(404).json({ error: '단어장을 찾을 수 없습니다.' });
+    if (wb.class.teacherId !== req.user.sub) {
+      return res.status(403).json({ error: '권한이 없습니다.' });
+    }
 
     const maxOrder = await prisma.word.aggregate({
       where: { wordBookId },
@@ -132,8 +161,14 @@ async function bulkAddWords(req, res, next) {
       return res.status(400).json({ error: '단어 목록이 비어있습니다.' });
     }
 
-    const wb = await prisma.wordBook.findUnique({ where: { id: req.params.id } });
+    const wb = await prisma.wordBook.findUnique({
+      where: { id: req.params.id },
+      include: { class: { select: { teacherId: true } } },
+    });
     if (!wb) return res.status(404).json({ error: '단어장을 찾을 수 없습니다.' });
+    if (wb.class.teacherId !== req.user.sub) {
+      return res.status(403).json({ error: '권한이 없습니다.' });
+    }
 
     const maxOrder = await prisma.word.aggregate({
       where: { wordBookId: req.params.id },
@@ -194,8 +229,12 @@ async function deleteWord(req, res, next) {
   try {
     const word = await prisma.word.findFirst({
       where: { id: req.params.wordId, wordBookId: req.params.id },
+      include: { wordBook: { include: { class: { select: { teacherId: true } } } } },
     });
     if (!word) return res.status(404).json({ error: '단어를 찾을 수 없습니다.' });
+    if (word.wordBook.class.teacherId !== req.user.sub) {
+      return res.status(403).json({ error: '권한이 없습니다.' });
+    }
 
     await prisma.studyRecord.deleteMany({ where: { wordId: word.id } });
     await prisma.word.delete({ where: { id: word.id } });

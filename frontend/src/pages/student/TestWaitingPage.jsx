@@ -30,11 +30,12 @@ export default function TestWaitingPage() {
     if (roomCode.length !== 4) { setError('방 코드는 4자리입니다.'); return; }
     setError('');
 
-    const socket = io(import.meta.env.VITE_SOCKET_URL);
+    const { token } = useAuthStore.getState();
+    const socket = io(import.meta.env.VITE_SOCKET_URL, { auth: { token } });
     socketRef.current = socket;
     setTestSocket(socket);
 
-    socket.emit('student:join', { roomCode, studentId: user.id });
+    socket.emit('student:join', { roomCode });
 
     socket.on('join:confirmed', ({ testId }) => {
       testRef.current = { testId, roomCode };
