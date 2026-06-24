@@ -1,11 +1,11 @@
-const { ZodError } = require('zod');
-
 function validate(schema) {
   return (req, res, next) => {
     const result = schema.safeParse(req.body);
     if (!result.success) {
-      const first = result.error.errors[0];
-      return res.status(400).json({ error: first.message });
+      // zod v4: .issues / zod v3: .errors (alias for .issues)
+      const issues = result.error?.issues ?? result.error?.errors ?? [];
+      const message = issues[0]?.message ?? '입력값이 올바르지 않습니다.';
+      return res.status(400).json({ error: message });
     }
     req.body = result.data;
     next();
