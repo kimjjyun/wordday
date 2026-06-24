@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+
+# 로그인이 필요한 비공개 영역은 크롤링 제외
+Disallow: /teacher
+Disallow: /student
+Disallow: /reset-password
+
+Sitemap: https://wordday999.netlify.app/sitemap.xml

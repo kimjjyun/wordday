@@ -206,7 +206,9 @@ export default function SoloHome() {
         </div>
       )}
 
-      <div className="pb-6 pt-2 text-center">
+      <div className="pb-6 pt-2 text-center flex items-center justify-center gap-3">
+        <Link to="/guide" className="text-[11px] text-gray-200 hover:text-gray-400 transition">학습 가이드</Link>
+        <span className="text-gray-100">·</span>
         <Link to="/privacy" className="text-[11px] text-gray-200 hover:text-gray-400 transition">개인정보처리방침</Link>
       </div>
     </div>

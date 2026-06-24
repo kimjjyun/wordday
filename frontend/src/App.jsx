@@ -4,6 +4,7 @@ import { useAuthStore } from './store/authStore';
 import LoginPage from './pages/LoginPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import PrivacyPage       from './pages/PrivacyPage';
+import GuidePage         from './pages/GuidePage';
 
 // 솔로
 import SoloHome      from './pages/solo/SoloHome';
@@ -41,6 +42,7 @@ export default function App() {
         <Route path="/login"          element={<LoginPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/privacy"        element={<PrivacyPage />} />
+        <Route path="/guide"          element={<GuidePage />} />
 
         {/* 솔로 (로그인 불필요) */}
         <Route path="/solo"           element={<SoloHome />} />
