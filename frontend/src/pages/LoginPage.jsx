@@ -150,7 +150,7 @@ export default function LoginPage() {
               className={inputCls}
               type="text"
               autoCapitalize="none"
-              placeholder="이메일 주소"
+              placeholder="아이디"
               value={forgotEmail}
               onChange={e => setForgotEmail(e.target.value)}
               required
@@ -208,9 +208,9 @@ export default function LoginPage() {
         )}
         {(tab === 'teacher' || tab === 'register') && (
           <div>
-            <input className={inputCls} type="email" autoCapitalize="none" placeholder="이메일 주소" value={form.email} onChange={set('email')} required />
+            <input className={inputCls} type="text" autoCapitalize="none" placeholder="아이디" value={form.email} onChange={set('email')} required />
             {tab === 'register' && (
-              <p className="text-[11px] text-gray-300 font-medium mt-1.5 px-1">로그인 아이디로 사용됩니다 (예: name@school.kr)</p>
+              <p className="text-[11px] text-gray-300 font-medium mt-1.5 px-1">영문, 숫자, 특수문자 사용 가능 (최대 50자)</p>
             )}
           </div>
         )}
@@ -223,7 +223,7 @@ export default function LoginPage() {
         <div>
           <input className={inputCls} type="password" placeholder="비밀번호" value={form.password} onChange={set('password')} required />
           {tab === 'register' && (
-            <p className="text-[11px] text-gray-300 font-medium mt-1.5 px-1">8자 이상 입력하세요</p>
+            <p className="text-[11px] text-gray-300 font-medium mt-1.5 px-1">4자 이상 입력하세요</p>
           )}
         </div>
 

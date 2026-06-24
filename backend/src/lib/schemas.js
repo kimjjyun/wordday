@@ -1,15 +1,15 @@
 const { z } = require('zod');
 
 const teacherRegisterSchema = z.object({
-  email: z.string().email('유효한 이메일 형식이 아닙니다.'),
-  password: z.string().min(8, '비밀번호는 8자 이상이어야 합니다.').max(100),
+  email: z.string().min(1, '아이디를 입력하세요.').max(50),
+  password: z.string().min(4, '비밀번호는 4자 이상이어야 합니다.').max(100),
   name: z.string().min(1, '이름을 입력하세요.').max(50),
   securityQuestion: z.string().min(1, '보안 질문을 선택하세요.'),
   securityAnswer: z.string().min(1, '보안 답변을 입력하세요.').max(100),
 });
 
 const teacherLoginSchema = z.object({
-  email: z.string().email('유효한 이메일 형식이 아닙니다.'),
+  email: z.string().min(1, '아이디를 입력하세요.'),
   password: z.string().min(1, '비밀번호를 입력하세요.'),
 });
 
@@ -26,7 +26,7 @@ const changeStudentPasswordSchema = z.object({
 
 const resetPasswordSchema = z.object({
   token: z.string().min(1, '토큰이 필요합니다.'),
-  password: z.string().min(8, '비밀번호는 8자 이상이어야 합니다.').max(100),
+  password: z.string().min(4, '비밀번호는 4자 이상이어야 합니다.').max(100),
 });
 
 const createClassSchema = z.object({
