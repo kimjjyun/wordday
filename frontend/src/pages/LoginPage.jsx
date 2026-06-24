@@ -150,7 +150,7 @@ export default function LoginPage() {
               className={inputCls}
               type="text"
               autoCapitalize="none"
-              placeholder="아이디"
+              placeholder="이메일 주소"
               value={forgotEmail}
               onChange={e => setForgotEmail(e.target.value)}
               required
@@ -201,10 +201,18 @@ export default function LoginPage() {
       /* 일반 로그인 폼 */
       <form onSubmit={handleSubmit} className="flex-1 space-y-3">
         {tab === 'register' && (
-          <input className={inputCls} placeholder="이름" value={form.name} onChange={set('name')} required />
+          <div>
+            <input className={inputCls} placeholder="이름" value={form.name} onChange={set('name')} required />
+            <p className="text-[11px] text-gray-300 font-medium mt-1.5 px-1">실명 또는 닉네임</p>
+          </div>
         )}
         {(tab === 'teacher' || tab === 'register') && (
-          <input className={inputCls} type="text" autoCapitalize="none" placeholder="아이디" value={form.email} onChange={set('email')} required />
+          <div>
+            <input className={inputCls} type="email" autoCapitalize="none" placeholder="이메일 주소" value={form.email} onChange={set('email')} required />
+            {tab === 'register' && (
+              <p className="text-[11px] text-gray-300 font-medium mt-1.5 px-1">로그인 아이디로 사용됩니다 (예: name@school.kr)</p>
+            )}
+          </div>
         )}
         {tab === 'student' && (
           <>
@@ -212,7 +220,12 @@ export default function LoginPage() {
             <input className={inputCls} placeholder="학번" value={form.studentCode} onChange={set('studentCode')} required />
           </>
         )}
-        <input className={inputCls} type="password" placeholder="비밀번호" value={form.password} onChange={set('password')} required />
+        <div>
+          <input className={inputCls} type="password" placeholder="비밀번호" value={form.password} onChange={set('password')} required />
+          {tab === 'register' && (
+            <p className="text-[11px] text-gray-300 font-medium mt-1.5 px-1">8자 이상 입력하세요</p>
+          )}
+        </div>
 
         {tab === 'register' && (
           <>
