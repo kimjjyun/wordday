@@ -69,6 +69,7 @@ export default function SoloFlashcard() {
         <div className="flex-1 flex items-center">
           <div style={{ perspective: '1200px' }} className="w-full">
             <div
+              key={index}
               onClick={() => setFlipped(f => !f)}
               style={{
                 transformStyle: 'preserve-3d',

@@ -110,6 +110,7 @@ export default function FlashcardPage() {
         <div className="flex-1 flex items-center">
           <div className="flip-scene w-full" onClick={() => setFlipped(f => !f)}>
             <div
+              key={index}
               style={{
                 transformStyle: 'preserve-3d',
                 transition: 'transform 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
